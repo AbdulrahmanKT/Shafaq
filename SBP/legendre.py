@@ -1,10 +1,7 @@
 
 
 import numpy as np 
-import scipy as sp 
 import matplotlib.pyplot as plt 
-import scipy as sc
-from scipy import optimize as op
 
 
 def p_n(x,n): 
