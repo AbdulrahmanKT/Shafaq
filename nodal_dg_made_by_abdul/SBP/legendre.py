@@ -162,3 +162,21 @@ def dp_n_c(n):
         
     return out
 
+
+def weights(n): 
+    """
+    This is a function that takes n as an argument.
+    It calculates the weights of the nth order Legendre-Gauss-Lobatto
+    points (LGL). 
+    """
+    dp = dp_n_c(n)
+    roots_dp = np.array(np.roots(dp))
+    w = np.zeros(n+1)
+    w[0] = 2/(n*(n+1))
+    w[-1] = w[0]
+
+    if n > 2: 
+        for i in range(1,-2):
+            w[i] = w[0]*(1/(p_n())**2)
+    return w
+
