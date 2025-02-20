@@ -163,20 +163,67 @@ def dp_n_c(n):
     return out
 
 
-def weights(n): 
+def lgl(n): 
     """
-    This is a function that takes n as an argument.
+    This is a function that takes n as an argument. n is the polynomial order.
     It calculates the weights of the nth order Legendre-Gauss-Lobatto
-    points (LGL). 
+    points (LGL) and the roots. Output = [roots_dp, weights] 
     """
-    dp = dp_n_c(n)
-    roots_dp = np.array(np.roots(dp))
+    dp = dp_n_c(n) # generates the coefficients of the dp/dx polynomial. 
+    roots_dp = np.array(np.roots(dp)) # solves for the roots of the dp/dx polynomial (the Absiccas)
     w = np.zeros(n+1)
     w[0] = 2/(n*(n+1))
     w[-1] = w[0]
 
     if n > 2: 
-        for i in range(1,-2):
-            w[i] = w[0]*(1/(p_n())**2)
-    return w
+        for i in range(1,n):
+            w[i] = w[0]*(1/(p_n(roots_dp[i-1],n))**2)
+    out = np.zeros(n+1)
+    out[0] = -1
+    out[-1] = 1
+    out[1:-1] = sorted(roots_dp)
+    
+    return np.matrix([out,w])
 
+def lagrange(n,x): 
+    """
+    This function creates a vector of lagrange polynomials that interpolate a unitary polynomial through the 
+    Legendre-Gauss-Lobatto points. 
+    n - order of the polynomial, which means n + 1 points. 
+    The output will be a vector evaluated at the n LGL points. 
+    """
+    points = lgl(n) # uses the previous function to generate the roots and the weights
+    roots = np.zeros(n+1)
+    roots[:] = points[0,:]
+
+    w = np.zeros(n+1)
+    w[:] = points[1,:]
+
+    l = np.ones(n+1) # initalization of the vector
+    for i in range(n+1): 
+        for j in range(n+1): 
+            if j != i:
+                l[i] = l[i]*(x-roots[j])/((roots[i]-roots[j]))
+    return l
+
+
+def dlagrange(n): 
+    """
+    This function takes in the degree of the lagrange polynomial - n along with a collocation point - x. 
+    The output is a matrix that satifies the SBP property for differentiation. 
+    """
+    points = lgl(n) # uses the previous function to generate the roots and the weights
+    roots = np.zeros(n+1)
+    roots[:] = points[0,:]
+
+    w = np.zeros(n+1)
+    w[:] = points[1,:]
+    dl = np.ones((n+1,n+1))
+    for i in range(n+1): 
+        for k in range(n+1):
+            if k != i: 
+                for j in range(n+1): 
+                    if j!= i and j!= k: 
+                        dl[i,k] = dl[i,k]*(roots[i]-roots[j])/((roots[i]-roots[j]))
+                dl[i,k] = dl[i,k]*(1/(roots[i] - roots[k]))
+    return dl

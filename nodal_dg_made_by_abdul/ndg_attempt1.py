@@ -5,21 +5,40 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 ### Up to 9 significant digits!!!!!!
 
+#Matrix P
+n = 5
+out = sb.lgl(5)
+roots = np.zeros(n+1)
+w = np.zeros(n+1)
+w[:] = out[1,:]
+roots[:] = out[0,:]
+result = np.zeros((n+1,n+1))
+l1 = np.zeros(n+1)
+for i in range(n+1):
+    result = result + np.outer(sb.lagrange(n,roots[i]),sb.lagrange(n,roots[i]))
+
+result = result * w
+#print(result)
 
 
-### Plotting the Legendre Polynomials
-#sb.legplot(sb.p_n, 5, [-0.999, 0.999], "legendre polynomial")
-#sb.legplot(sb.dp_n, 5, [-0.999, 0.999], "Derivative of Legendre polynomial")
+#Matrix Q from P
+dq = sb.dlagrange(n)
+result1 = np.zeros_like(result)
+for i in range(n+1):
+    result1[:,i] = sb.lagrange(n,roots[i]) @ np.transpose(sb.dlagrange(n))
+result1 = result1 * w
+print(result1) 
 
-#test = sb.p_n_c(4)
-#x = np.linspace(-1, 1, 500)
-#
-#
-#plt.plot(x, sb.p_n(x,n))
-#a = sb.p_n_c(4)
-#print(a)
-#print(np.roots(a))
-dp = sb.dp_n_c(4)
-roots_dp = np.array(np.roots(dp))
-print(roots_dp)
-print(sb.weights(4))
+
+dpq = np.linalg.inv(result)@ result1
+
+
+
+#Q Another way
+q = result @ sb.dlagrange(n)
+print(q)
+
+#Matrix D
+#D = sb.dlagrange(n) 
+#print("\n", D)
+
