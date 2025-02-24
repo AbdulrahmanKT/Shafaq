@@ -219,7 +219,7 @@ def dlagrange(n):
     w = np.zeros(n+1)
     w[:] = points[1,:]
     dl = np.ones((n+1,n+1))
-    for i in range(n+1): 
+    for i in range(n+1): # Note, since there are 2 exclusions (from the definition of the derivative of the lagrange polynomials)
         for k in range(n+1):
             if k != i: 
                 for j in range(n+1): 
@@ -227,3 +227,32 @@ def dlagrange(n):
                         dl[i,k] = dl[i,k]*(roots[i]-roots[j])/((roots[i]-roots[j]))
                 dl[i,k] = dl[i,k]*(1/(roots[i] - roots[k]))
     return dl
+
+
+
+def Vmonde(n, *args):
+    """
+    This function generates a vandermonde matrix of order nxn. This matrix uses the monomials as its basis, 
+    and they are evaluated at the LGL points.
+
+    Note: NOT YET IMPLIMENTED!!
+    There are different basis implimented: 
+        - *args = none, this function will use the default monomial basis. 
+        - *args = p, will use the Legendre Polynomials
+        - *args = l, will use the Lagrange Interpolating Polynomials
+    """
+    
+    x = np.zeros(n)
+    out = lgl(n-1)
+    x[:] = out[0,:]
+    V = np.zeros((n,n))
+
+
+    if args == "l":
+        raise ValueError("The Vandermonde with Lagrange Basis has not been implimented yet")
+    if args == "p":
+        raise ValueError("The Vandermonde with Legendre Polynomial Basis has not been implimented yet")
+    else:
+        for j in range(n):
+            V[j,:] = [x[j]**i for i in range(n)]
+    return V
