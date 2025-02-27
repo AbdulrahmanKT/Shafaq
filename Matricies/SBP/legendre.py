@@ -248,11 +248,11 @@ def Vmonde(n, *args):
     V = np.zeros((n,n))
 
 
-    if args == "l":
-        raise ValueError("The Vandermonde with Lagrange Basis has not been implimented yet")
-    if args == "p":
-        raise ValueError("The Vandermonde with Legendre Polynomial Basis has not been implimented yet")
-    else:
-        for j in range(n):
-            V[j,:] = [x[j]**i for i in range(n)]
+    #if args == "l":
+    #    raise ValueError("The Vandermonde with Lagrange Basis has not been implimented yet")
+    #if args == "p":
+    #    raise ValueError("The Vandermonde with Legendre Polynomial Basis has not been implimented yet")
+    #else:
+    for j in range(n):
+        V[j,:] = [x[j]**i for i in range(n)]
     return V
