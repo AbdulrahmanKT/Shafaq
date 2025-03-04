@@ -224,7 +224,7 @@ def dlagrange(n):
             if k != i: 
                 for j in range(n+1): 
                     if j!= i and j!= k: 
-                        dl[i,k] = dl[i,k]*(roots[i]-roots[j])/((roots[i]-roots[j]))
+                        dl[i,k] = dl[i,k]*(roots[i]-roots[j])/((roots[k]-roots[j]))
                 dl[i,k] = dl[i,k]*(1/(roots[i] - roots[k]))
     return dl
 
@@ -256,3 +256,11 @@ def Vmonde(n, *args):
     for j in range(n):
         V[j,:] = [x[j]**i for i in range(n)]
     return V
+
+def sbp_d(n): 
+
+    """
+    Generates the differentiation matrix D of size n + 1 by n + 1. Where n is the degree of the solution
+    """
+    D = dlagrange(n)
+    return D 
