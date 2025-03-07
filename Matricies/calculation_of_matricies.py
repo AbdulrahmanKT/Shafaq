@@ -9,7 +9,7 @@ np.set_printoptions(threshold=sys.maxsize)
 
 #Matrix P
 n = 5
-out = sb.lgl(5)
+out = sb.lgl(n)
 roots = np.zeros(n+1)
 w = np.zeros(n+1)
 w[:] = out[1,:]
@@ -17,9 +17,10 @@ roots[:] = out[0,:]
 result = np.zeros((n+1,n+1))
 l1 = np.zeros(n+1)
 for i in range(n+1):
-    result = result + np.outer(sb.lagrange(n,roots[i]),sb.lagrange(n,roots[i]))
+    result = result + w*(np.outer(sb.lagrange(n,roots[i]),sb.lagrange(n,roots[i])))
 
-result = result * w
+
+P = result
 print("The matrix P \n", result)
 
 
@@ -31,50 +32,31 @@ for i in range(n+1):
 result1 = result1 * w
 print("The matrix Q from P \n", result1) 
 
-
-dpq = np.linalg.inv(result)@ result1
-print("D from P and Q \n ", dpq)
-
-
-#Q Another way
-q = result @ sb.dlagrange(n)
-print("Q from D \n", q)
-
-#Matrix D
-D = sb.dlagrange(n) 
-print("D first \n", D)
+# Matrix D 
+D = sb.dlagrange(n)
 
 
-##########################
-##########################
-#######Validation#########
-x = np.zeros(n+1) # Initialization
-x[:] = sb.lgl(n)[0,:]
-y_1 = 5*np.ones_like(x)
-y_1_d = D@y_1
-y_1_dpq = dpq@y_1
-print(y_1_d, y_1_dpq)
-# Plot the data
-fig, ax = plt.subplots(figsize=(10, 6))  # Create figure with specified size
-ax.plot(x, y_1, 'b-', linewidth=2, label="$y_1$ = 1")
-ax.plot(x, y_1_d, 'r.',linewidth=2, label="y1_d")
-ax.plot(x, y_1_dpq, 'g*', linewidth=2, label="y1dpq")
+#### Testing Differentiation and integration 
+m = 2 # Slope of test 
+y = np.array([m*roots[i] for i in range(n+1)])
+dy = D@y 
+yp = P@y 
 
-
-# Set plot labels and title
-ax.set_xlabel('X-axis', fontsize=12)
-ax.set_ylabel('Y-axis', fontsize=12)
-ax.set_title('Plot of y = 1', fontsize=14)
-
+fig , ax = plt.subplots(figsize=(10,6))
+ax.plot(roots, y, label="y")
+ax.plot(roots, dy, label="dy")
+ax.plot(roots, yp, label="yp")
 # Add grid, legend and set axis limits
 ax.grid(True, linestyle='--', alpha=0.7)
 ax.legend(fontsize=10)
-ax.set_xlim([-2, 2])
+ax.set_xlim([-1.5, 1.5])
 ax.set_ylim([-10, 10])
-print(D)
+
 # Improve overall appearance
 #plt.tight_layout()
 plt.show()
-## difference 
-error = D - dpq
-print(error)
+
+
+#error = D - dpq
+#print(error)
+print(w)

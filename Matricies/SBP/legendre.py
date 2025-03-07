@@ -174,14 +174,14 @@ def lgl(n):
     w = np.zeros(n+1)
     w[0] = 2/(n*(n+1))
     w[-1] = w[0]
-
+    roots_dp = sorted(roots_dp)
     if n > 2: 
         for i in range(1,n):
             w[i] = w[0]*(1/(p_n(roots_dp[i-1],n))**2)
     out = np.zeros(n+1)
     out[0] = -1
     out[-1] = 1
-    out[1:-1] = sorted(roots_dp)
+    out[1:-1] = roots_dp
     
     return np.matrix([out,w])
 
@@ -218,14 +218,20 @@ def dlagrange(n):
 
     w = np.zeros(n+1)
     w[:] = points[1,:]
-    dl = np.ones((n+1,n+1))
+    dl = np.zeros((n+1,n+1))
+    prod = 1 # Just to save the intermediate steps of multiplication 
     for i in range(n+1): # Note, since there are 2 exclusions (from the definition of the derivative of the lagrange polynomials)
         for k in range(n+1):
             if k != i: 
+                prod = 1
                 for j in range(n+1): 
                     if j!= i and j!= k: 
-                        dl[i,k] = dl[i,k]*(roots[i]-roots[j])/((roots[k]-roots[j]))
-                dl[i,k] = dl[i,k]*(1/(roots[i] - roots[k]))
+                        prod= prod*(roots[i]-roots[j])/((roots[k]-roots[j]))
+                dl[i,k] = prod*(1/(roots[i] - roots[k]))
+ 
+        
+    for i in range(n+1):
+        dl[i, i] = -np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
     return dl
 
 
