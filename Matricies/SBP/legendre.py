@@ -207,7 +207,7 @@ def lagrange(n,x):
     return l
 
 
-def dlagrange(n): 
+def dlagrange(n, *args): 
     """
     This function takes in the degree of the lagrange polynomial - n along with a collocation point - x. 
     The output is a matrix that satifies the SBP property for differentiation. 
@@ -232,7 +232,7 @@ def dlagrange(n):
         
     for i in range(n+1):
         dl[i, i] = -np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
-    return dl
+    return -1*dl
 
 
 

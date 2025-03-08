@@ -1,7 +1,7 @@
 import SBP as sb 
 import matplotlib.pyplot as plt 
 import matplotlib
-matplotlib.use('Qt5Agg')
+#matplotlib.use('Qt5Agg')
 import numpy as np 
 import sys
 np.set_printoptions(threshold=sys.maxsize)
