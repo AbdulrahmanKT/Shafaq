@@ -12,7 +12,7 @@ In this script, the SBP operators will be used to numerically differentiate mult
 
 
 ### Setting up the colocation points 
-n = 5 # poly nomial order
+n = 4 # poly nomial order
 x = np.zeros(n+1) # Initialization
 x[:] = sb.lgl(n)[0,:]
 

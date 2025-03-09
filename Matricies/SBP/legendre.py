@@ -216,6 +216,11 @@ def dlagrange(n, *args):
     roots = np.zeros(n+1)
     roots[:] = points[0,:]
 
+
+    if len(args) == 1: # This is to add a custom range of values (domain different than [-1,1]). Note: The negative number is because lgl(n) is defined from small to big. 
+        jacob = args[0]
+    else: 
+        jacob = -1
     w = np.zeros(n+1)
     w[:] = points[1,:]
     dl = np.zeros((n+1,n+1))
@@ -231,7 +236,7 @@ def dlagrange(n, *args):
  
         
     for i in range(n+1):
-        dl[i, i] = -np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
+        dl[i, i] = jacob*np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
     return -1*dl
 
 
