@@ -20,7 +20,7 @@ for i in range(n+1):
     result = result + w*(np.outer(sb.lagrange(n,roots[i]),sb.lagrange(n,roots[i])))
 
 
-P = result
+P = -1*result
 print("The matrix P \n", result)
 
 
