@@ -42,10 +42,10 @@ fig, ax = plt.subplots(figsize=(10, 6))  # Create figure with specified size
 # Plot the data
 ax.plot(x, y_1, 'b-', linewidth=2, label="$y_1$ = 1")
 ax.plot(x, y_2, 'r-', linewidth=2, label="$y_2$ =  $mx$")
-ax.plot(x, y_3, 'g-', linewidth=2, label="$y_2= x^2$")
+ax.plot(x, y_3, 'g-', linewidth=2, label="$y_3= x^2$")
 ax.plot(x, y_1_d, 'b*', linewidth=2, label="$Dy_1$")
 ax.plot(x, y_2_d, 'r*', linewidth=2, label="$Dy_2$")
-ax.plot(x, D@y_3, 'g*', linewidth=2, label="$Dy_2$")
+ax.plot(x, D@y_3, 'g*', linewidth=2, label="$Dy_3$")
 # Set plot labels and title
 ax.set_xlabel('X-axis', fontsize=12)
 ax.set_ylabel('Y-axis', fontsize=12)
