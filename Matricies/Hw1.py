@@ -34,3 +34,4 @@ print("The matrix Q from P \n", Q)
 # Matrix D 
 D = sb.dlagrange(n)
 print("The matrix D \n", D) 
+

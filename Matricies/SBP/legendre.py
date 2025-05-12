@@ -207,7 +207,7 @@ def lagrange(n,x):
     return l
 
 
-def dlagrange(n, *args): 
+def dlagrange(n, tol=1e-12): 
     """
     This function takes in the degree of the lagrange polynomial - n along with a collocation point - x. 
     The output is a matrix that satifies the SBP property for differentiation. 
@@ -217,10 +217,6 @@ def dlagrange(n, *args):
     roots[:] = points[0,:]
 
 
-    if len(args) == 1: # This is to add a custom range of values (domain different than [-1,1]). Note: The negative number is because lgl(n) is defined from small to big. 
-        jacob = args[0]
-    else: 
-        jacob = -1
     w = np.zeros(n+1)
     w[:] = points[1,:]
     dl = np.zeros((n+1,n+1))
@@ -233,11 +229,21 @@ def dlagrange(n, *args):
                     if j!= i and j!= k: 
                         prod= prod*(roots[i]-roots[j])/((roots[k]-roots[j]))
                 dl[i,k] = prod*(1/(roots[i] - roots[k]))
- 
+    
+    # a boolean mask that’s True for all off-diagonal positions
+    mask_offdiag = ~np.eye(n+1, dtype=bool)
+
+    # a boolean mask of entries whose magnitude is below the tolerance
+    small = np.abs(dl) < tol
+
+    # combine them: spots that are both off-diagonal AND tiny
+    dl[mask_offdiag & small] = 0.0
+
         
     for i in range(n+1):
-        dl[i, i] = jacob*np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
-    return -1*dl ###The minus sign is for the 1D jacobian
+        dl[i, i] = -1*np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
+
+    return dl ###The minus sign is for the 1D jacobian
 
 
 
@@ -365,7 +371,7 @@ class Element:
 class Mesh:
     def __init__(self, x_min, x_max,  y_max, y_min , nex, ney, n):
         lgl = np.zeros(n+1)
-        lgl[:]= sb.lgl(n)[0,:]
+        lgl[:]= lgl(n)[0,:]
         self.lgl     = lgl
         self.x_min   = x_min
         self.x_max   = x_max
@@ -382,11 +388,13 @@ class Mesh:
         """
         Creates elements and assigns them to the mesh.
         """
+       
+
         self.solution = None
         dx = (self.x_max - self.x_min) / self.nex
         dy = (self.y_max - self.y_min) / self.ney
         index = 0 # For intializing element IDs 
-        
+
         for i in range(self.nex):
             for j in range(self.ney):
                 left_bound = self.x_min + i * dx
@@ -414,4 +422,94 @@ class Mesh:
                 
     #def set_solution_at_time(self,solution):
         
-    
+    #####################################################
+    ########### Element 1D ##############################
+    #####################################################
+
+
+class Element1D:
+    """
+    1D element for nodal DG / SBP methods.
+    Uses Legendre-Gauss-Lobatto (LGL) nodes and maps reference [-1,1] to physical [left,right].
+    """
+    def __init__(self, index: int, left: float, right: float, n: int):
+        self.index = index
+        self.left = left
+        self.right = right
+        self.n = n
+        # reference nodes xi and weights (we only need xi)
+        xi, _ = lgl(n)
+        self.xi = np.array(xi).flatten()
+        # physical coordinates
+        self.x = ( (self.right - self.left)/2 ) * self.xi + (self.right + self.left)/2
+        # Jacobian for mapping
+        self.jacobian = (self.right - self.left)/2
+        # placeholder for solution values at nodes
+        self.solution = np.zeros(n+1)
+
+    def set_solution(self, sol: np.ndarray):
+        """Assign solution values at the element's nodes."""
+        assert sol.shape == (self.n+1,)
+        self.solution = sol.copy()
+
+    def map_to_reference(self, x_phys: float) -> float:
+        """Map a physical coordinate back to reference xi in [-1,1]."""
+        return (2*x_phys - (self.left + self.right)) / (self.right - self.left)
+
+    def basis_at(self, x_phys: float) -> np.ndarray:
+        """Evaluate all Lagrange basis polynomials at a physical point."""
+        xi = self.map_to_reference(x_phys)
+        return lagrange(self.n, xi)
+
+
+class Mesh1D:
+    """
+    1D mesh composed of equally spaced Element1D objects.
+    """
+    def __init__(self, x_min: float, x_max: float, nex: int, n: int):
+        self.x_min = x_min
+        self.x_max = x_max
+        self.nex = nex
+        self.n = n
+        self.elements = []
+        self.generate_mesh()
+
+    def generate_mesh(self):
+        """Partition [x_min,x_max] into nex elements and create Element1D instances."""
+        dx = (self.x_max - self.x_min) / self.nex
+        for i in range(self.nex):
+            left = self.x_min + i*dx
+            right = left + dx
+            elem = Element1D(i, left, right, self.n)
+            self.elements.append(elem)
+
+    def get_element(self, idx: int) -> Element1D:
+        """Retrieve element by index."""
+        return self.elements[idx]
+
+    def set_solutions(self, U: np.ndarray):
+        """Assign solution array U of shape (nex, n+1) to all elements."""
+        assert U.shape == (self.nex, self.n+1)
+        for i, elem in enumerate(self.elements):
+            elem.set_solution(U[i])
+
+    def global_coordinates(self) -> np.ndarray:
+        """Return sorted unique global node coordinates."""
+        coords = []
+        for elem in self.elements:
+            coords.extend(elem.x.tolist())
+        return np.unique(coords)
+
+    def plot_mesh(self):
+        """Simple plot of the mesh nodes and element edges."""
+        import matplotlib.pyplot as plt
+        X = self.global_coordinates()
+        Y = np.zeros_like(X)
+        plt.figure(figsize=(8,1))
+        plt.plot(X, Y, 'o')
+        for elem in self.elements:
+            plt.plot(elem.x, np.zeros_like(elem.x), '-')
+        plt.yticks([])
+        plt.title(f"1D Mesh: {self.nex} elements, degree {self.n}")
+        plt.xlabel("x")
+        plt.show()
