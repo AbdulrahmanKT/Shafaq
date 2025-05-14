@@ -182,8 +182,8 @@ def lgl(n):
     out[0] = -1
     out[-1] = 1
     out[1:-1] = roots_dp
-    
-    return np.matrix([out,w])
+    ### Note: I did not include the jacobians in here!!!!
+    return np.array([out,w])
 
 def lagrange(n,x): 
     """
@@ -207,20 +207,19 @@ def lagrange(n,x):
     return l
 
 
-def dlagrange(n, *args): 
+def dlagrange(n, tol=1e-12): 
     """
     This function takes in the degree of the lagrange polynomial - n along with a collocation point - x. 
     The output is a matrix that satifies the SBP property for differentiation. 
     """
+    #####Note: This function is coded to match the logarithmic derivative form of the lagrange polynomial. A more efficient implementation is the 
+    ##### Baycentric form. 
+    
     points = lgl(n) # uses the previous function to generate the roots and the weights
     roots = np.zeros(n+1)
     roots[:] = points[0,:]
 
 
-    if len(args) == 1: # This is to add a custom range of values (domain different than [-1,1]). Note: The negative number is because lgl(n) is defined from small to big. 
-        jacob = args[0]
-    else: 
-        jacob = -1
     w = np.zeros(n+1)
     w[:] = points[1,:]
     dl = np.zeros((n+1,n+1))
@@ -232,12 +231,22 @@ def dlagrange(n, *args):
                 for j in range(n+1): 
                     if j!= i and j!= k: 
                         prod= prod*(roots[i]-roots[j])/((roots[k]-roots[j]))
-                dl[i,k] = prod*(1/(roots[i] - roots[k]))
- 
+                dl[i,k] = prod*(1/(-roots[i] + roots[k]))
+    
+    # a boolean mask that’s True for all off-diagonal positions
+    mask_offdiag = ~np.eye(n+1, dtype=bool)
+
+    # a boolean mask of entries whose magnitude is below the tolerance
+    small = np.abs(dl) < tol
+
+    # combine them: spots that are both off-diagonal AND tiny
+    dl[mask_offdiag & small] = 0.0
+
         
     for i in range(n+1):
-        dl[i, i] = jacob*np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
-    return -1*dl
+        dl[i, i] = -1*np.sum(dl[i, :])  # since off-diagonals sum to -D_ii
+
+    return dl ###The minus sign is for the definition of the points
 
 
 
@@ -275,3 +284,54 @@ def sbp_d(n):
     """
     D = dlagrange(n)
     return D 
+
+
+#def sbp_p(n):
+    #out = lgl(n)
+    #roots = np.zeros(n+1)
+    #w = np.zeros(n+1)
+    #w[:] = out[1,:]
+    #roots[:] = out[0,:]
+    #result = np.zeros((n+1,n+1))
+    #l1 = np.zeros(n+1)
+    #for i in range(n+1):
+    #    result = result + (np.outer(lagrange(n,roots[i]),lagrange(n,roots[i])))*w[i]
+    #P = result # The negative one stems from the formulation of the code. The points were sorted from right to left, hence the jacobian is negative.
+    #return P 
+    
+def sbp_p(n):
+    out = lgl(n)
+    roots = np.zeros(n+1)
+    w = np.zeros(n+1)
+    w[:] = out[1,:]
+    roots[:] = out[0,:]
+    result = np.zeros((n+1,n+1))
+    P = np.diag(w)
+    return P 
+
+
+def sbp_q(n): 
+    out = lgl(n)
+    roots = np.zeros(n+1)
+    w = np.zeros(n+1)
+    w[:] = out[1,:]
+    roots[:] = out[0,:]
+    dq = sbp_d(n)
+    result1 = np.zeros((n+1,n+1))
+    for i in range(n+1):
+        result1[:,i] = lagrange(n,roots[i]) @dq*w[i]
+    result1 = result1  
+    return result1 
+
+def two_point_flux_function(n, D, u): 
+    ## Using numpy broadcasting is much faster than loops 
+    ui = u[:,None]
+    uj = u[None,:]
+    F = np.zeros((n+1,n+1)) 
+    F = (1/6)*(ui**2 + ui*uj + uj**2)
+    return 2*np.multiply(D,F)
+
+
+
+
+
