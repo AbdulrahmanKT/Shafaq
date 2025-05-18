@@ -29,6 +29,9 @@ class Element1D:
         self.xi      = xi        # shape (n+1,)
         self.n       = xi.size-1
         self.nu      = nu
+        self.m       = 1 # this parameter turns off the advection, and simply makes the equation diffusive 
+        self.v_off   = 0 # this parameter turns off the diffusion
+        
 
         # physical nodes: x(ξ) = h*ξ + c
         h         = (right - left)/2
@@ -106,8 +109,8 @@ class Element1D:
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
         ul, ur   = self.left_boundary(), self.right_boundary()
-        taul     = -(ul + abs(ul)) / 3.0
-        taur     =  (ur - abs(ur)) / 3.0
+        taul     = -(ul + abs(ul))*self.m / 3.0
+        taur     =  (ur - abs(ur))*self.m / 3.0
         sat_inv      =  taul*(ul - gl)*self.el + taur*(ur - gr)*self.er
         # ---- 2) compute local du/dx at faces ----
         grad_local = self.D_phys.dot(self.u)
@@ -126,7 +129,7 @@ class Element1D:
         sat_visc_R = (0.5*nu*jump_duR + 0.5*tau_visc*jump_uR) * self.er
 
         # ---- 4) combine and apply P⁻¹ ----
-        sat_total = sat_inv + sat_visc_L + sat_visc_R
+        sat_total = sat_inv + self.v_off*(sat_visc_L + sat_visc_R)
         self.sat_rhs = self.P_inv.dot(sat_total)
         return self.sat_rhs 
 # -----------------------------------------------------------------------------    
@@ -134,8 +137,8 @@ class Element1D:
         """This method calculates the RHS contribution from the interior operator.
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        inv = -2*sb.two_point_flux_function(self.n, self.D_phys, self.u) ## - 2(DF)*(Ones)
-        diff   = self.nu * (self.D_phys.dot(self.D_phys.dot(self.u)))
+        inv    = sb.two_point_flux_function(self.n, self.D_phys, self.u)*self.m ## 2(DF)*(Ones) is the -2 correct? 
+        diff   = self.v_off*self.nu * (self.D_phys.dot(self.D_phys.dot(self.u)))
         irhs  = inv + diff
         self.irhs = irhs
         return irhs
@@ -144,7 +147,7 @@ class Element1D:
         """This method calculates the total RHS contribution from the IRHS and SAT_RHS. 
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        irhs     = -self.interior_RHS()
+        irhs     = self.interior_RHS()
         sat_rhs  = self.SAT_rhs(gl, gr, duL_n, duR_n)
         self.rhs = irhs + sat_rhs
         return self.rhs
@@ -187,7 +190,7 @@ class Mesh1D:
                  D_ref: np.ndarray,
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray, 
-                 nu = 1e-2):
+                 nu = 0):
         """
         Initialize the mesh and its elements.
 
@@ -209,6 +212,8 @@ class Mesh1D:
             Norm (quadrature) matrix on reference.
         Q_ref : np.ndarray
             Skew-symmetric SBP matrix on reference.
+        nu = 1e-3: float
+            viscocity parameter.
         """
         # store mesh parameters
         self.x_min, self.x_max = x_min, x_max
@@ -222,7 +227,7 @@ class Mesh1D:
         self.Q_ref = Q_ref.copy()
         self.el    = np.eye(self.n + 1)
         self.er    = np.eye(self.n + 1)
-
+        self.E0    = 6 # This Quantity is to normalize the total energy
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -239,19 +244,6 @@ class Mesh1D:
                 Q_ref=self.Q_ref
             )
             self.elements.append(elem)
-
-
-# -----------------------------------------------------------------------------
-    def set_solution(self, U: np.ndarray):
-        """
-        Assign a full solution array to mesh elements.
-
-        U must have shape (nex, n+1).
-        """
-        assert U.shape == (self.nex, self.n+1), \
-            f"Expected U shape ({self.nex},{self.n+1}), got {U.shape}"
-        for elem, u_row in zip(self.elements, U):
-            elem.set_solution_reference(u_row)
 # -----------------------------------------------------------------------------
     def global_coordinates(self) -> np.ndarray:
         """
@@ -278,6 +270,7 @@ class Mesh1D:
             x_phys = elem.x
             y_num = f(x_phys)
             elem.set_initial_condition(y_num)
+        self.E0 = self.total_energy()
 # -----------------------------------------------------------------------------
     def plot(self,
              ax=None,
@@ -442,6 +435,16 @@ class Mesh1D:
                 * (elem.K1 + 2*elem.K2 + 2*elem.K3 + elem.K4)
             )
 # -----------------------------------------------------------------------------       
+    def total_energy_normalized(self) -> float:
+        """
+        Compute  E = 1/2 * sum_e (u_e^T P_phys u_e).
+        """
+        E = 0.0
+        for elem in self.elements:
+            # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
+            E += elem.u @ (elem.P_phys @ elem.u)
+        return 0.5 * E / self.E0      
+# ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:
         """
         Compute  E = 1/2 * sum_e (u_e^T P_phys u_e).
@@ -451,7 +454,6 @@ class Mesh1D:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
             E += elem.u @ (elem.P_phys @ elem.u)
         return 0.5 * E       
-
 
 
 

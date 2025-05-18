@@ -337,7 +337,7 @@ def two_point_flux_function(n ,D, u):
     F = np.zeros((n+1,n+1)) 
     F = (1/6)*(ui**2 + ui*uj + uj**2)
     
-    return -(D * F).sum(axis=1)
+    return -2*(D * F).sum(axis=1)
 
 
 

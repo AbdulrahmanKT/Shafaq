@@ -7,10 +7,10 @@ from SBP.mesh_1d import *
 
 # --- 1) Problem parameters ---
 Lx      = 8           # domain length
-nex     = 10              # number of elements
-poly_p  = 9               # polynomial degree (n)
-t_final = 100             # final time
-
+nex     = 100              # number of elements
+poly_p  = 6               # polynomial degree (n)
+t_final = 2             # final time
+dt      = 1e-2
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -27,7 +27,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref)
+              Q_ref=Q_ref, nu = 1e-4)
 
 ######---------------#######
 # Initial Condition 
@@ -50,7 +50,10 @@ def ivbc(x):
     u[mask] = np.sin(x[mask])
     return u
 
-mesh.set_initial_condition(ivbc)
+def constant(x): 
+    return np.zeros_like(x)
+ic = constant(mesh.x())
+mesh.set_initial_condition(np.sin)
 mesh.rhs()
 fig, ax = plt.subplots(figsize=(20,5))
 mesh.plot()
@@ -64,11 +67,11 @@ ax.set_title(" Initial Condition")
 ax.set_ylim(-1, 2.0)
 ax.grid(True)
 plt.tight_layout()
-#ax.legend()
+
+
 # --- 4) Determine stable dt via max wave-speed ---
 dx_elem = Lx / nex
 u_max   = np.max([np.max(np.abs(elem.u)) for elem in mesh.elements])
-dt      = 1e-3##CFL * dx_elem / (u_max if u_max>0 else 1.0)
 
 # --- 5) Time‐stepping loop using RK4 ---
 t = 0.0
@@ -91,12 +94,16 @@ while t < t_final:
         #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
         #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
         #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
-    ax.plot( mesh.total_energy(), label="Total Energy")
-    ax.set_title("Solution to the Viscous Burgers Equation")
-    ax.set_ylim(-1, 2.0)
+    #ax.plot( mesh.total_energy(), label="Total Energy")
+    ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF")
+    ax.set_ylim(-2, 2.0)
     ax.grid(True)
     times.append(t)
-    energies.append(mesh.total_energy())
+    E = mesh.total_energy_normalized()
+    energies.append(E)
+    print("===================================================")
+    print(f"t = {t:.4f},  E = {E:.6e}")
+    print("===================================================")
     plt.pause(1/100)
 #ax.legend()
 plt.tight_layout()
