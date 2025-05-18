@@ -169,20 +169,28 @@ def lgl(n):
     It calculates the weights of the nth order Legendre-Gauss-Lobatto
     points (LGL) and the roots. Output = [roots_dp, weights] 
     """
-    dp = dp_n_c(n) # generates the coefficients of the dp/dx polynomial. 
-    roots_dp = np.array(np.roots(dp)) # solves for the roots of the dp/dx polynomial (the Absiccas)
-    w = np.zeros(n+1)
-    w[0] = 2/(n*(n+1))
-    w[-1] = w[0]
-    roots_dp = sorted(roots_dp)
-    if n > 2: 
-        for i in range(1,n):
-            w[i] = w[0]*(1/(p_n(roots_dp[i-1],n))**2)
-    out = np.zeros(n+1)
-    out[0] = -1
-    out[-1] = 1
-    out[1:-1] = roots_dp
-    ### Note: I did not include the jacobians in here!!!!
+    """
+    Return the n-th order Legendre–Gauss–Lobatto nodes (xi) and weights (w).
+    xi: array shape (n+1,)
+    w : array shape (n+1,)
+    """
+    # 1) find interior roots of P_n'
+    dp       = dp_n_c(n)               # sympy coeffs of P_n'
+    roots_dp = np.sort(np.roots(dp))   # length n-1
+
+    # 2) assemble full xi
+    xi = np.empty(n+1)
+    xi[0]   = -1.0
+    xi[-1]  =  1.0
+    if n > 1:
+        xi[1:-1] = roots_dp
+
+    # 3) evaluate P_n at all xi (scalar p_n → list comprehension)
+    Pn_xi = np.array([p_n(xi_i, n) for xi_i in xi])
+
+    # 4) compute weights in one vectorized expression
+    w = 2.0 / (n*(n+1) * (Pn_xi**2))
+    out = xi
     return np.array([out,w])
 
 def lagrange(n,x): 
@@ -318,18 +326,18 @@ def sbp_q(n):
     roots[:] = out[0,:]
     dq = sbp_d(n)
     result1 = np.zeros((n+1,n+1))
-    for i in range(n+1):
-        result1[:,i] = lagrange(n,roots[i]) @dq*w[i]
-    result1 = result1  
+    result1 = w[:,None]*dlagrange(n)   # Q = PD - using the numpy broadcast
     return result1 
 
-def two_point_flux_function(n, D, u): 
+def two_point_flux_function(n ,D, u): 
     ## Using numpy broadcasting is much faster than loops 
+    #n = len(u) - 1
     ui = u[:,None]
     uj = u[None,:]
     F = np.zeros((n+1,n+1)) 
     F = (1/6)*(ui**2 + ui*uj + uj**2)
-    return 2*np.multiply(D,F)
+    
+    return -(D * F).sum(axis=1)
 
 
 
