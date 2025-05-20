@@ -9,7 +9,7 @@ from SBP.mesh_1d import *
 Lx      = 2*np.pi           # domain length
 nex     = 100             # number of elements
 poly_p  = 6               # polynomial degree (n)
-t_final = 1.2            # final time
+t_final = 1.1            # final time
 dt      = 1e-3
 plot_every = 10
 # --- 2) Build SBP operators on reference ---
@@ -103,6 +103,7 @@ while t < t_final:
             ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
         plt.pause(1/10000)
         plt.tight_layout()
+        #plt.savefig("Final_Step.png")
     #ax.plot( mesh.total_energy(), label="Total Energy")
     
     
@@ -112,7 +113,7 @@ while t < t_final:
     print("===================================================")
     print(f"t = {t:.4f},  E = {E:.6e}")
     print("===================================================")
-    
+   
 #ax.legend()
 plt.tight_layout()
 plt.show()
