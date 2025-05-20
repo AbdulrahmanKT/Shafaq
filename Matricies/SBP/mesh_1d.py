@@ -30,7 +30,7 @@ class Element1D:
         self.n       = xi.size-1
         self.nu      = nu
         self.m       = 1 # this parameter turns off the advection, and simply makes the equation diffusive 
-        self.v_off   = 0 # this parameter turns off the diffusion
+        self.v_off   = 1 # this parameter turns off the diffusion
         
 
         # physical nodes: x(ξ) = h*ξ + c

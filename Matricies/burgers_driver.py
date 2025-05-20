@@ -6,11 +6,12 @@ from SBP.mesh_1d import *
 
 
 # --- 1) Problem parameters ---
-Lx      = 8           # domain length
-nex     = 100              # number of elements
+Lx      = 2*np.pi           # domain length
+nex     = 100             # number of elements
 poly_p  = 6               # polynomial degree (n)
 t_final = 1.2            # final time
-dt      = 1e-2
+dt      = 1e-3
+plot_every = 10
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -64,7 +65,7 @@ for i, elem in enumerate(mesh.elements):
     #ax.plot(elem.x, elem.rhs, "o", label="Total RHS")
     ax.grid(True)
 ax.set_title(" Initial Condition")
-ax.set_ylim(-1, 2.0)
+ax.set_ylim(-2, 2.0)
 ax.grid(True)
 plt.tight_layout()
 
@@ -89,22 +90,29 @@ while t < t_final:
     t += dt
     it += 1
     ax.clear()
-    for i, elem in enumerate(mesh.elements):
-        ax.plot(elem.x, elem.u, label="Solution")
-        #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
-        #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
-        #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
-    #ax.plot( mesh.total_energy(), label="Total Energy")
-    ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF")
-    ax.set_ylim(-2, 2.0)
     ax.grid(True)
+    ax.set_xlabel("x")
+    ax.set_ylabel("u")
+    ax.set_ylim(-2, 2.0)
+    if it % plot_every == 0:
+        for i, elem in enumerate(mesh.elements):
+            ax.plot(elem.x, elem.u, label="Solution")
+            #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
+            #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
+            #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
+            ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
+        plt.pause(1/10000)
+        plt.tight_layout()
+    #ax.plot( mesh.total_energy(), label="Total Energy")
+    
+    
     times.append(t)
     E = mesh.total_energy_normalized()
     energies.append(E)
     print("===================================================")
     print(f"t = {t:.4f},  E = {E:.6e}")
     print("===================================================")
-    plt.pause(1/100)
+    
 #ax.legend()
 plt.tight_layout()
 plt.show()
