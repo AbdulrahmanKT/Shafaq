@@ -8,7 +8,7 @@ from SBP.mesh_1d import *
 # --- 1) Problem parameters ---
 Lx      = 2*np.pi           # domain length
 nex     = 100             # number of elements
-poly_p  = 6               # polynomial degree (n)
+poly_p  = 6              # polynomial degree (n)
 t_final = 1.1            # final time
 dt      = 1e-3
 plot_every = 10
