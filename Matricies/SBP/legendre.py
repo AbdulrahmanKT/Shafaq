@@ -8,6 +8,7 @@ import sympy as sp
 def p_n(x,n): 
     """
      This is a function that returns the nth order legendre polynomial evaluated at the point x, with order n.
+     Note: This function does not normalize the polynomials! 
 
      x: is the point of evaluation 
      n: is the order of the Legendre polynomial

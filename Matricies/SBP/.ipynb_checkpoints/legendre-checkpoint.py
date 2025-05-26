@@ -8,6 +8,7 @@ import sympy as sp
 def p_n(x,n): 
     """
      This is a function that returns the nth order legendre polynomial evaluated at the point x, with order n.
+     Note: This function does not normalize the polynomials! 
 
      x: is the point of evaluation 
      n: is the order of the Legendre polynomial
@@ -214,6 +215,27 @@ def lagrange(n,x):
                 l[i] = l[i]*(x-roots[j])/((roots[i]-roots[j]))
     return l
 
+def lagrange_n_k(n,k,x):
+    """
+    This function creates a vector of lagrange polynomials that interpolate a unitary polynomial through the 
+    Legendre-Gauss-Lobatto points. 
+    n - order of the polynomial, which means n + 1 points. 
+    The output will be a vector evaluated at the n LGL points. 
+    """
+    points = lgl(n) # uses the previous function to generate the roots and the weights
+    roots = np.zeros(n+1)
+    roots[:] = points[0,:]
+
+    w = np.zeros(n+1)
+    w[:] = points[1,:]
+
+    l = np.ones(n+1) # initalization of the vector
+    for i in range(n+1): 
+        for j in range(k+1): 
+            if j != i:
+                l[i] = l[i]*(x-roots[j])/((roots[i]-roots[j]))
+    return l
+
 
 def dlagrange(n, tol=1e-12): 
     """
@@ -337,7 +359,7 @@ def two_point_flux_function(n ,D, u):
     F = np.zeros((n+1,n+1)) 
     F = (1/6)*(ui**2 + ui*uj + uj**2)
     
-    return -(D * F).sum(axis=1)
+    return -2*(D * F).sum(axis=1)
 
 
 
