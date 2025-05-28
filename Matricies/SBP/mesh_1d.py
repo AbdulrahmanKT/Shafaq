@@ -31,8 +31,8 @@ class Element1D:
         self.xi      = xi        # shape (n+1,)
         self.n       = xi.size-1
         self.nu      = nu
-        self.m       = 1 # this parameter turns off the advection, and simply makes the equation diffusive 
-        self.v_off   = 1 # this parameter turns off the diffusion
+        self.m       = 0 # this parameter turns off the advection, and simply makes the equation diffusive 
+        self.v_off   = 0 # this parameter turns off the diffusion
         self.linear  = linear # This controls if the solver is using the linear advection equation or not
         self.advec   = a # Advection Constant
         # physical nodes: x(ξ) = h*ξ + c
@@ -117,8 +117,8 @@ class Element1D:
             taul = -self.advec / 2.0
             taur =  self.advec / 2.0
         else:
-            taul = -(ul + abs(ul))*self.m / 3.0
-            taur =  (ur - abs(ur))*self.m / 3.0
+            taul = -np.abs((ul + gl))*self.m / 2.0
+            taur =  np.abs((ur + gr))*self.m / 2.0
 
         sat_inv      =  taul*(ul - gl)*self.el + taur*(ur - gr)*self.er
         # ---- 2) compute local du/dx at faces ----
@@ -472,7 +472,7 @@ class Mesh1D:
         E = 0.0
         for elem in self.elements:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
-            E += elem.u @ (elem.P_phys @ elem.u)
+            E += elem.u @ (elem.P_phys @ elem.rhs)
         return 0.5 * E / self.E0      
 # ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:

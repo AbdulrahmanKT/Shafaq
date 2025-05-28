@@ -7,10 +7,10 @@ from SBP.mesh_1d import *
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 5             # number of elements
-poly_p  = 5              # polynomial degree (n)
-t_final = 0.01            # final time
-dt      = 1e-5
+nex     = 50             # number of elements
+poly_p  = 6              # polynomial degree (n)
+t_final = 100            # final time
+dt      = 1e-3
 plot_every = 10
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
@@ -28,7 +28,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref, nu = 1e-3, linear=True, a=1)
+              Q_ref=Q_ref, nu = 1e-3, linear=False, a=2)
 
 ######---------------#######
 # Initial Condition 
