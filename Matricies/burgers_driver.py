@@ -6,10 +6,10 @@ from SBP.mesh_1d import *
 
 
 # --- 1) Problem parameters ---
-Lx      = 2*np.pi           # domain length
-nex     = 100             # number of elements
+Lx      = 5           # domain length
+nex     = 11             # number of elements
 poly_p  = 6              # polynomial degree (n)
-t_final = 1.1            # final time
+t_final = 100            # final time
 dt      = 1e-3
 plot_every = 10
 # --- 2) Build SBP operators on reference ---
@@ -28,7 +28,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref, nu = 1e-3)
+              Q_ref=Q_ref, nu = 1e-3, linear=False, a=2)
 
 ######---------------#######
 # Initial Condition 
@@ -53,8 +53,12 @@ def ivbc(x):
 
 def constant(x): 
     return np.zeros_like(x)
-ic = constant(mesh.x())
-mesh.set_initial_condition(np.sin)
+
+def gaussian(x, mu=3, sigma=0.3):
+    return np.exp(-((x - mu)**2) / (2 * sigma**2))
+
+
+mesh.set_initial_condition(gaussian)
 mesh.rhs()
 fig, ax = plt.subplots(figsize=(20,5))
 mesh.plot()

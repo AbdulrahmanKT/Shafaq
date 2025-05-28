@@ -22,6 +22,8 @@ class Element1D:
                  D_ref: np.ndarray,   # reference D
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray, 
+                 linear: bool = False,
+                 a: float = 1.0,
                  nu = 1e-3):  # viscocity
         self.index   = index
         self.left    = left
@@ -31,8 +33,8 @@ class Element1D:
         self.nu      = nu
         self.m       = 1 # this parameter turns off the advection, and simply makes the equation diffusive 
         self.v_off   = 1 # this parameter turns off the diffusion
-        
-
+        self.linear  = linear # This controls if the solver is using the linear advection equation or not
+        self.advec   = a # Advection Constant
         # physical nodes: x(ξ) = h*ξ + c
         h         = (right - left)/2
         c         = (right + left)/2
@@ -109,8 +111,15 @@ class Element1D:
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
         ul, ur   = self.left_boundary(), self.right_boundary()
-        taul     = -(ul + abs(ul))*self.m / 3.0
-        taur     =  (ur - abs(ur))*self.m / 3.0
+
+
+        if self.linear:
+            taul = -self.advec / 2.0
+            taur =  self.advec / 2.0
+        else:
+            taul = -(ul + abs(ul))*self.m / 3.0
+            taur =  (ur - abs(ur))*self.m / 3.0
+
         sat_inv      =  taul*(ul - gl)*self.el + taur*(ur - gr)*self.er
         # ---- 2) compute local du/dx at faces ----
         grad_local = self.D_phys.dot(self.u)
@@ -137,7 +146,14 @@ class Element1D:
         """This method calculates the RHS contribution from the interior operator.
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        inv    = sb.two_point_flux_function(self.n, self.D_phys, self.u)*self.m ## 2(DF)*(Ones) is the -2 correct? 
+        if self.linear:
+            inv = -self.advec * self.D_phys @ self.u  # Linear advection
+        else:
+            inv = sb.two_point_flux_function(self.n, self.D_phys, self.u) * self.m  # Nonlinear
+
+        
+        
+        
         diff   = self.v_off*self.nu * (self.D_phys.dot(self.D_phys.dot(self.u)))
         irhs  = inv + diff
         self.irhs = irhs
@@ -189,7 +205,9 @@ class Mesh1D:
                  w: np.ndarray,
                  D_ref: np.ndarray,
                  P_ref: np.ndarray,
-                 Q_ref: np.ndarray, 
+                 Q_ref: np.ndarray,
+                 a: float = 1.0,
+                 linear: bool = False,
                  nu = 0):
         """
         Initialize the mesh and its elements.
@@ -212,6 +230,11 @@ class Mesh1D:
             Norm (quadrature) matrix on reference.
         Q_ref : np.ndarray
             Skew-symmetric SBP matrix on reference.
+        linear : bool
+            Controls if the linear advection is used or non-linear (Burger)
+        a :  float
+            Advection constnat. 
+        
         nu = 1e-3: float
             viscocity parameter.
         """
@@ -228,6 +251,10 @@ class Mesh1D:
         self.el    = np.eye(self.n + 1)
         self.er    = np.eye(self.n + 1)
         self.E0    = 6 # This Quantity is to normalize the total energy
+        self.linear = linear
+        self.advec  = a 
+
+
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -241,7 +268,10 @@ class Mesh1D:
                 xi=self.xi,
                 D_ref=self.D_ref,
                 P_ref=self.P_ref,
-                Q_ref=self.Q_ref
+                Q_ref=self.Q_ref,
+                linear=self.linear,
+                a=self.advec,
+                nu=self.nu
             )
             self.elements.append(elem)
 # -----------------------------------------------------------------------------
@@ -343,7 +373,7 @@ class Mesh1D:
         for e_id, elem in enumerate(self.elements):
             # periodic neighbor indices
             left_id  = (e_id - 1) % NE
-            right_id = (e_id + 1) % NE
+            right_id = (e_id + 1) % NE # To properly find the next element
 
             # neighbor boundary values
             gL = self.elements[left_id].right_boundary()
