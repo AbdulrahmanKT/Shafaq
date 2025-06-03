@@ -109,7 +109,7 @@ def fractional_energy_highest_mode(a):
     n = a.size - 1
     i = np.arange(a.size)
     # energy in each mode: E[i] = a[i]**2 * (2/(2*i+1))
-    E = a**2 / (2/(2*i + 1))
+    E = a**2 * (2/(2*i + 1))
     return E[n] / E.sum()
 
 ###################################### Functions ##################################################
@@ -134,17 +134,22 @@ for i in range(10): # Looping over polynomial degrees from 1 - 10
     x7 , w7 = sb.lgl(n) # the 7 and 6 are old place holders. x7 means the absiccas of the nth polynomial and 6 means the same thing but for the kth order. 
     x6 , w6 = sb.lgl(k)
 
-    u7 = triangle(x7) # Defining the shock
-
+    u7 = triangle(x7) # Defining the triangular wave
+    u7_m = nodal_to_modal(u7,x7,w7) # Projecting the nodal representation to the modal representation.
 # Interpolation onto a lower solution order 
     
-
+# The following if condition is a test for smooth but non-continuous profiles. 
+# The persson paper talks about the even-odd behaviour. So in this code, for even solution orders, the interpolation and projection will kill off the 
+# the highest two terms
     if k > 2 and k % 2 == 0: 
-        L6 = np.array([sb.lagrange(k-1,x7[i]) for i in range(n+1)]) # Operator that interpolates a nth polynomial into a kth polyniomial (k = n - 1 )
-        P6 = np.linalg.inv(sb.sbp_p(k-1)) # Inverse of the mass matrix of order k. Again the 6 here just means the kth order.   
+        L6 = np.array([sb.lagrange(k-1,x7[i]) for i in range(n+1)]) # This operator projects onto 2 degrees below the nth. 
+        P6 = np.linalg.inv(sb.sbp_p(k-1))
+        #u7_m[-2] = 0    # Note: if this is uncommented, then one would see the effect of killing the highest 2 terms
+        u7_m[-1] = 0   
     else: 
         L6 = np.array([sb.lagrange(k,x7[i]) for i in range(n+1)]) # Using the 
         P6 = np.linalg.inv(sb.sbp_p(k))
+        u7_m[-1] = 0
 
     P7 = sb.sbp_p(n) # Mass Matrix of order n. 7 just means of order n.       
     u_lower = P6@(L6.T.dot(P7@u7)) # This lower is the kth solution interpolated from the nth solution. 
@@ -153,8 +158,8 @@ for i in range(10): # Looping over polynomial degrees from 1 - 10
     u7_n = L6.dot(u_lower) # This is essentially the lower order solution interpolated back into nth order. 
 
 # Projection to the modal space and killing the highest frequency
-    u7_m = nodal_to_modal(u7,x7,w7) # Projecting the nodal representation to the modal representation. 
-    u7_m[-1] = 0 # Setting the coefficient of the highest degree mode to 0, effectivly killing the highest frequency. 
+     
+     
     
 
 ## Calcating the energy of the Solution 
@@ -176,8 +181,11 @@ for i in range(10): # Looping over polynomial degrees from 1 - 10
     
     diff_n = u7_um-u7_nm
     diff_m = u7_um-u7_m
-    S_n = (n**2)*diff_n.T.dot(P7@diff_n)/(u7_um.T.dot(P7@u7_um)) # the coefficient n^2 is here to proove that the scalling of the sensor when applied to a jump discontinuity is indeed 1/n^2
-    S_m = (n**2)*diff_m.T.dot(P7@diff_m)/(u7_um.T.dot(P7@u7_um))
+    S_n = (n**3)*diff_n.T.dot(P7@diff_n)/(u7_um.T.dot(P7@u7_um))
+    S_m = (n**3)*diff_m.T.dot(P7@diff_m)/(u7_um.T.dot(P7@u7_um))
+    S_n_vec.append(S_n)
+    S_m_vec.append(S_m)
+    dim.append(n)
     
     
     print("============================================================")
@@ -188,3 +196,12 @@ for i in range(10): # Looping over polynomial degrees from 1 - 10
     print(f"Modal Energy Approach = {E_m[i]}")
     print(f"Energy of the unmodified jump = {E[i]}")
     print("============================================================")
+
+ax.plot(dim , S_n_vec,"--x", label="Sensor using nodal interpolation")
+ax.plot(dim , S_m_vec,"--o",  label="Sensor using modal projection")    
+ax.set_ylim(0, 12)
+ax.set_xlim(1, 10)
+ax.grid()
+ax.set_title("Plot of the Sensor usin g the nodal interpolation and the modal projection")
+ax.legend()
+plt.show()

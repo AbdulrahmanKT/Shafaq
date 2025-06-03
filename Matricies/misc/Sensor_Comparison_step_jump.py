@@ -95,7 +95,7 @@ def fractional_energy_highest_mode(a):
     n = a.size - 1
     i = np.arange(a.size)
     # energy in each mode: E[i] = a[i]**2 * (2/(2*i+1))
-    E = a**2 / (2/(2*i + 1))
+    E = a**2 * (2/(2*i + 1))
     return E[n] / E.sum()
 
 ###################################### Functions ##################################################
