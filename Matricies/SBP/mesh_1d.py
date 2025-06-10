@@ -22,19 +22,15 @@ class Element1D:
                  D_ref: np.ndarray,   # reference D
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray, 
-                 linear: bool = False,
-                 a: float = 1.0,
-                 nu = 1e-3):  # viscocity
+                 equation: Equation1D):  # viscocity
         self.index   = index
         self.left    = left
         self.right   = right
         self.xi      = xi        # shape (n+1,)
         self.n       = xi.size-1
-        self.nu      = nu
-        self.m       = 0 # this parameter turns off the advection, and simply makes the equation diffusive 
-        self.v_off   = 0 # this parameter turns off the diffusion
-        self.linear  = linear # This controls if the solver is using the linear advection equation or not
-        self.advec   = a # Advection Constant
+        self.equation = equation # Stores Equation to be solved
+        
+        
         # physical nodes: x(ξ) = h*ξ + c
         h         = (right - left)/2
         c         = (right + left)/2
@@ -110,51 +106,16 @@ class Element1D:
         """This method calculates the RHS contribution to this element from the neighboring elements via gl and gr.
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        ul, ur   = self.left_boundary(), self.right_boundary()
-
-
-        if self.linear:
-            taul = -self.advec / 2.0
-            taur =  self.advec / 2.0
-        else:
-            taul = -np.abs((ul + gl))*self.m / 2.0
-            taur =  np.abs((ur + gr))*self.m / 2.0
-
-        sat_inv      =  taul*(ul - gl)*self.el + taur*(ur - gr)*self.er
-        # ---- 2) compute local du/dx at faces ----
-        grad_local = self.D_phys.dot(self.u)
-        duL, duR   = grad_local[0], grad_local[-1]
-
-        # ---- 3) viscous SAT (symmetric interior penalty) ----
-        # jumps in gradient and in value
-        jump_duL =    duL - duL_n
-        jump_duR =   -duR + duR_n   # = duR_n - duR
-        jump_uL  =    ul  - gl
-        jump_uR  =   -ur  + gr     # = gR - uR
         
-        tau_visc = self.nu
-        nu = self.nu
-        sat_visc_L = (0.5*nu*jump_duL + 0.5*tau_visc*jump_uL) * self.el
-        sat_visc_R = (0.5*nu*jump_duR + 0.5*tau_visc*jump_uR) * self.er
-
-        # ---- 4) combine and apply P⁻¹ ----
-        sat_total = sat_inv + self.v_off*(sat_visc_L + sat_visc_R)
-        self.sat_rhs = self.P_inv.dot(sat_total)
-        return self.sat_rhs 
+        return self.equation.SAT(self, gl, gr, duL_n, duR_n)  
 # -----------------------------------------------------------------------------    
     def interior_RHS(self):
         """This method calculates the RHS contribution from the interior operator.
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        if self.linear:
-            inv = -self.advec * self.D_phys @ self.u  # Linear advection
-        else:
-            inv = sb.two_point_flux_function(self.n, self.D_phys, self.u) * self.m  # Nonlinear
 
-        
-        
-        
-        diff   = self.v_off*self.nu * (self.D_phys.dot(self.D_phys.dot(self.u)))
+        inv   = self.equation.interior_flux(self)
+        diff  = self.equation.interior_diffusive_flux(self) 
         irhs  = inv + diff
         self.irhs = irhs
         return irhs
@@ -206,9 +167,7 @@ class Mesh1D:
                  D_ref: np.ndarray,
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray,
-                 a: float = 1.0,
-                 linear: bool = False,
-                 nu = 0):
+                 equation: Equation1D):
         """
         Initialize the mesh and its elements.
 
@@ -230,13 +189,9 @@ class Mesh1D:
             Norm (quadrature) matrix on reference.
         Q_ref : np.ndarray
             Skew-symmetric SBP matrix on reference.
-        linear : bool
-            Controls if the linear advection is used or non-linear (Burger)
-        a :  float
-            Advection constnat. 
-        
-        nu = 1e-3: float
-            viscocity parameter.
+        equation: Equation1D
+            The equation to be solved, providing the necessary methods
+            for computing fluxes and SAT terms.
         """
         # store mesh parameters
         self.x_min, self.x_max = x_min, x_max
@@ -251,8 +206,7 @@ class Mesh1D:
         self.el    = np.eye(self.n + 1)
         self.er    = np.eye(self.n + 1)
         self.E0    = 6 # This Quantity is to normalize the total energy
-        self.linear = linear
-        self.advec  = a 
+        self.equation = equation  # Store the equation to be solved
 
 
         # build physical elements
@@ -269,9 +223,7 @@ class Mesh1D:
                 D_ref=self.D_ref,
                 P_ref=self.P_ref,
                 Q_ref=self.Q_ref,
-                linear=self.linear,
-                a=self.advec,
-                nu=self.nu
+                equation=equation
             )
             self.elements.append(elem)
 # -----------------------------------------------------------------------------
@@ -411,7 +363,6 @@ class Mesh1D:
         (now including viscous SAT) and per-element state copies.
         """
         NE = self.nex
-        nu = self.nu
 
         # 1) Save each element's current u  →  U0[e]
         U0 = [elem.u.copy() for elem in self.elements]

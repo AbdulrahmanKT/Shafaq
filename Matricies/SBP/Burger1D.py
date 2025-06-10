@@ -1,8 +1,9 @@
 import numpy as np 
-import SBP.Equations as eq1
+from SBP.Equations import Equation1D
 from SBP.mesh_1d import Element1D
+import SBP as sb
 
-class Advection(eq1): 
+class Burger(Equation1D): 
     """
     1D linear advection with optional diffusion. 
     Implements:
@@ -10,29 +11,29 @@ class Advection(eq1):
       - diffusion_term(elem):    ∂_x( ν ∂_x u )
       - sat_penalty(elem, ...): upwind SAT for advection + SIPG viscous penalties
     """
-    def __init__(self, a: float, nu: float = 0.0, v_off: float = 1.0):
+    def __init__(self, c_off: float, nu: float = 0.0, v_off: float = 1.0):
         """
         Parameters:
-          a     : advection speed
+          c_off : flag (0 or 1) to turn inviscid SAT on/off; multiply inviscid SAT by v_off
           nu    : constant viscosity (if nu>0, adds diffusion ∂_x(ν ∂_x u))
           v_off : flag (0 or 1) to turn viscous SAT on/off; multiply viscous SAT by v_off
         """
-        self.a     = a
+        self.c_off = c_off # This parameter turns off convection
         self.nu    = nu
         self.v_off = v_off
-    def interior_advective_flux(self, elem: Element1D): 
+    def interior_flux(self, elem: Element1D): 
         """
-        Computes the interior advective flux (a * u_x)
-        which is a @ D @ u
+        Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
+        F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
-        return - elem.a * (elem.D_phys @ elem.u) # Linear Advection 
+        return sb.two_point_flux_function(elem.n, elem.D_phys, elem.u) * self.c_off
     
     def interior_diffusive_flux(self, elem: Element1D): 
         """
         Computes the interior diffusive fluxes (nu * u_xx)
         which is D @ (nu * D @ u), where nu is the viscocity
         """
-        return elem.D_phys.dot(elem.nu * elem.D_phys.dot(elem.u))
+        return elem.D_phys.dot(self.nu * elem.D_phys.dot(elem.u))
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float): 
         """
@@ -50,10 +51,15 @@ class Advection(eq1):
         jump_uR  =   -ur  + gr    # Jump in the state variables on the right face
         nu       =    self.nu
         # Inviscid SAT Arithmatic
-        tau_left     = -self.a / 2 # Linear Penalty proposional to the advection strength
-        tau_right    = self.a / 2 # Linear Penalty proposional to the advection strength
+        tau_left     = -np.abs((ul + gl))*self.m / 2.0 # Linear Penalty proposional to the convection strength
+        tau_right    =  np.abs((ur + gr))*self.m / 2.0 # Linear Penalty proposional to the convection strength
         sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
 
         # Viscous SAT Arithmatic 
-        sat_visc_L = (0.5*nu*jump_duL + 0.5*nu*jump_uL) * elem.el
-        sat_visc_R = (0.5*nu*jump_duR + 0.5*nu*jump_uR) * elem.er
+        sat_visc_L = (0.5*nu*jump_duL + 0.5*nu*jump_uL) * elem.el # Calculation of the left Viscous SAT
+        sat_visc_R = (0.5*nu*jump_duR + 0.5*nu*jump_uR) * elem.er # Calculation of the right Viscous SAT
+        
+        # Forming the Total SAT for the Advection Equation
+        sat_total = self.c_off*sat_inv + self.v_off*(sat_visc_L + sat_visc_R) 
+        sat_rhs = elem.P_inv.dot(sat_total)
+        return sat_rhs

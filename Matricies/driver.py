@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from SBP.legendre import * 
 from SBP.mesh_1d import * 
+from SBP.Equations import *
 
 
 # --- 1) Problem parameters ---
@@ -19,6 +20,20 @@ D_ref = sbp_d(n)
 P_ref = sbp_p(n)
 Q_ref = sbp_q(n)
 
+
+# Option A: Viscous Burgers
+#  base_nu = 1e-3     # constant viscosity
+#  eq = BurgersEquation(base_nu=base_nu, sensor_fn=None)
+
+# Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
+a    = 1.0
+nu   = 1e-3         # viscosity
+v_off = 1.0         # turn viscous SAT on/off (1→on, 0→off)
+eq   = Advection(a=a, nu=nu, v_off=v_off)
+
+
+
+
 # --- 3) Create mesh and set initial condition u(x,0) = sin(2πx/Lx) + 1 ---
 mesh = Mesh1D(x_min=0.0,
               x_max=Lx,
@@ -28,7 +43,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref, nu = 1e-3, linear=True, a=1)
+              Q_ref=Q_ref, equation=eq)
 
 ######---------------#######
 # Initial Condition 
