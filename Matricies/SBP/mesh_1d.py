@@ -22,7 +22,7 @@ class Element1D:
                  D_ref: np.ndarray,   # reference D
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray, 
-                 equation: Equation1D):  # viscocity
+                 equation):  # viscocity
         self.index   = index
         self.left    = left
         self.right   = right
@@ -167,7 +167,7 @@ class Mesh1D:
                  D_ref: np.ndarray,
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray,
-                 equation: Equation1D):
+                 equation):
         """
         Initialize the mesh and its elements.
 
@@ -196,7 +196,6 @@ class Mesh1D:
         # store mesh parameters
         self.x_min, self.x_max = x_min, x_max
         self.nex, self.n       = nex, n
-        self.nu    = nu
         # store reference SBP data
         self.xi    = xi.copy()
         self.w     = w.copy()
@@ -423,7 +422,7 @@ class Mesh1D:
         E = 0.0
         for elem in self.elements:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
-            E += elem.u @ (elem.P_phys @ elem.rhs)
+            E += elem.u @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
         return 0.5 * E / self.E0      
 # ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:

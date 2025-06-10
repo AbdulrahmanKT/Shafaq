@@ -120,7 +120,7 @@ class Advection(Equation1D):
         nu       =    self.nu
         # Inviscid SAT Arithmatic
         tau_left     = -self.a / 2 # Linear Penalty proposional to the advection strength
-        tau_right    = self.a / 2 # Linear Penalty proposional to the advection strength
+        tau_right    =  self.a / 2 # Linear Penalty proposional to the advection strength
         sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
 
         # Viscous SAT Arithmatic 
