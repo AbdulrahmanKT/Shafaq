@@ -8,10 +8,10 @@ from SBP.Equations import *
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 5           # number of elements
+nex     = 100           # number of elements
 poly_p  = 8              # polynomial degree (n)
-t_final = 10          # final time
-dt      = 1e-2
+t_final = 0.5          # final time
+dt      = 1e-3
 plot_every = 10
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
@@ -26,8 +26,8 @@ Q_ref = sbp_q(n)
 #  eq = BurgersEquation(base_nu=base_nu, sensor_fn=None)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
-a    = 1
-nu   = 0     # viscosity
+a    = 0
+nu   = 0.002     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 eq   = Advection(a=a, nu=nu, v_off=v_off)
 #eq   = Burger(c_off=1, nu=nu, v_off=v_off)
