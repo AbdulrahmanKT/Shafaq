@@ -167,7 +167,8 @@ class Mesh1D:
                  D_ref: np.ndarray,
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray,
-                 equation):
+                 equation, 
+                 shock_capture:bool = False):
         """
         Initialize the mesh and its elements.
 
@@ -192,7 +193,11 @@ class Mesh1D:
         equation: Equation1D
             The equation to be solved, providing the necessary methods
             for computing fluxes and SAT terms.
+        shock_capture : bool
+            This option turns on or off (True or False) the shock
+            capturing scheme.
         """
+        
         # store mesh parameters
         self.x_min, self.x_max = x_min, x_max
         self.nex, self.n       = nex, n
@@ -207,7 +212,12 @@ class Mesh1D:
         self.E0    = 6 # This Quantity is to normalize the total energy
         self.equation = equation  # Store the equation to be solved
 
-
+        # Shock Capturing 
+        self.shock_capture = shock_capture # This option controls if the shock capturing is initialzed
+        if self.shock_capture == True: 
+            self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
+            self.P_lower = sb.sbp_p(n=n-1)
+            
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -423,7 +433,7 @@ class Mesh1D:
         for elem in self.elements:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
             E += elem.u @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
-        return 0.5 * E / self.E0      
+        return E / self.E0      
 # ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:
         """
