@@ -8,11 +8,11 @@ from SBP.Equations import *
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 100           # number of elements
-poly_p  = 1              # polynomial degree (n)
-t_final = 5          # final time
-dt      = 1e-4
-plot_every = 100
+nex     = 200           # number of elements
+poly_p  = 7              # polynomial degree (n)
+t_final = 1          # final time
+dt      = 1e-5
+plot_every = 10000
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
