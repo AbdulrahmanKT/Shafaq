@@ -3,13 +3,12 @@ import numpy as np
 from SBP.mesh_1d import Element1D
 
 
-def nodal_to_modal(u:np.ndarray, x:np.ndarray, w:np.ndarray, V:np.ndarray):
+def nodal_to_modal(u:np.ndarray, w:np.ndarray, V:np.ndarray):
     """
     Convert nodal values u at points x with weights w
     into modal Legendre coefficients a.
     
     u : array_like, shape (n+1,)   — nodal values
-    x : array_like, shape (n+1,)   — LGL nodes
     w : array_like, shape (n+1,)   — corresponding LGL weights
     V : array, shape (n+1,n+1)     — Vandermonde Matrix evaluated at the LGL collocation points
     
@@ -40,8 +39,13 @@ def perrson_sensor(a:np.ndarray,kill_mode:int = -1,  eps:float = 1e-30) -> float
     S = max(S, eps) # To avoid inf
     return np.log(S)
 
-def av(u:np.array, s0:float = np.log(1/3**4), kappa:float = 1, e0: float = 1e-1): 
-    s = perrson_sensor(u)
+def av(s:float, s0:float = np.log(1/3**4), kappa:float = 1, e0: float = 1e-1): 
+    """
+    u       : array_like, shape (n+1,)    — solution vector of nodal values
+    s       : float,                      — shock indicator 
+    s0      : float,                      — AV shock threshold
+    kappa   : float,                      — AV smoothing range 
+    """
     return np.where(s<s0 - kappa, 0.0, 
                     np.where((s > s0 - kappa) & (s < s0 + kappa), 
                              e0*0.5*(1 + np.sin(np.pi*(s - s0)/(2 * kappa))), e0))

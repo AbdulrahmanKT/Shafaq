@@ -3,6 +3,16 @@ import matplotlib.pyplot as plt
 import SBP as sb
 
 
+
+
+############ For VSCODE to import the autocomplete ###################
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import Shock
+######################################################################
+
+
+
 #######################################
 ############ Elements
 #######################################
@@ -47,6 +57,9 @@ class Element1D:
         self.P_inv   = (1/self.J)*np.linalg.inv(self.P_ref)
         self.el      = np.eye(self.n + 1)[0]
         self.er      = np.eye(self.n + 1)[-1]
+        # shock capturing 
+        self.av_eps = 0        # This is the initialization of artificial viscocity to be added
+        self.S      = 0        # This is the initialization of the Sensor
         # Initialization for Solution vector and for RHS vector
         self.u          = np.zeros(self.n+1)
         self.irhs       = np.zeros_like(self.u)
@@ -211,12 +224,15 @@ class Mesh1D:
         self.er    = np.eye(self.n + 1)
         self.E0    = 6 # This Quantity is to normalize the total energy
         self.equation = equation  # Store the equation to be solved
+        
 
         # Shock Capturing 
         self.shock_capture = shock_capture # This option controls if the shock capturing is initialzed
         if self.shock_capture == True: 
             self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
-            
+        self.s0 = np.log(1/self.n**4)
+        self.kappa = 1 
+        self.eps_max = 0.01    
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -443,6 +459,23 @@ class Mesh1D:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
             E += elem.u @ (elem.P_phys @ elem.u)
         return 0.5 * E       
+# ----------------------------------------------------------------------------- 
+    def shock_capture(self): 
+        """Computes the Persson Sensor and the Artificial Viscocity. 
+        Stores the AV in elem.av_eps."""
+        if not self.shock_capture:
+            return                           # This option exits early when this option is not true
+        
+        V = self.V 
+        w = self.w
+        s0 = self.s0
+        kappa = self.kappa
+        eps_max = self.eps_max
+
+        for elem in self.elements: 
+            a = Shock.nodal_to_modal(u=self.u,w=w,V=V)
+            elem.S = Shock.perrson_sensor(a=a)
+            elem.av_eps = Shock.av(elem.S, s0=s0, kappa=kappa, e0=eps_max)
 
 
 

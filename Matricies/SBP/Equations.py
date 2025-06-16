@@ -3,6 +3,10 @@ import numpy as np
 from SBP.mesh_1d import Element1D
 import SBP as sb
 
+
+
+
+
 class Equation1D(ABC): 
     """
     Abstract base class defining the interface for a 1D PDE.
