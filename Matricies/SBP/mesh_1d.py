@@ -230,8 +230,8 @@ class Mesh1D:
         self.use_shock_capture = shock_capture # This option controls if the shock capturing is initialzed
         if self.use_shock_capture == True: 
             self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
-        self.s0 = np.log(1/self.n**4)
-        self.kappa = 1 
+        self.s0 = -3 #np.log(1/self.n**4)
+        self.kappa = 0.2 
         self.eps_max = 0.1    
         # build physical elements
         self.elements = []
@@ -478,7 +478,13 @@ class Mesh1D:
             a = Shock.nodal_to_modal(u=elem.u,w=w,V=V)
             elem.S = Shock.perrson_sensor(a=a)
             elem.av_eps = Shock.av(elem.S, s0=s0, kappa=kappa, e0=eps_max)
-
+# -----------------------------------------------------------------------------\
+    #def print_max_av(self) -> float:
+    #   """Finds the maximum av value.
+    #   """
+    #   av = 0
+    #   for elem in self.elements: 
+           
 #######################################
 ############ Meshing
 #######################################

@@ -9,7 +9,7 @@ import SBP.Shock # For using the shock capturing
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 200           # number of elements
+nex     = 20           # number of elements
 poly_p  = 7              # polynomial degree (n)
 t_final = 1          # final time
 dt      = 1e-3
@@ -28,7 +28,7 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 1
-nu   = 0     # viscosity
+nu   = 0.0001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
 eq   = Burger(c_off=1, nu=nu, v_off=v_off)
