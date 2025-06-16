@@ -105,7 +105,10 @@ class Advection(Equation1D):
         Computes the interior diffusive fluxes (nu * u_xx)
         which is D @ (nu * D @ u), where nu is the viscocity
         """
-        return elem.D_phys.dot(self.nu * elem.D_phys.dot(elem.u))
+        nu = self.nu
+        eps = elem.av_eps
+        nu_sum = nu + eps
+        return elem.D_phys.dot(nu_sum * elem.D_phys.dot(elem.u))
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float): 
         """
@@ -161,6 +164,7 @@ class Burger(Equation1D):
         Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
+        
         return sb.two_point_flux_function(elem.n, elem.D_phys, elem.u) * self.c_off
     
     def interior_diffusive_flux(self, elem: Element1D): 
@@ -168,7 +172,10 @@ class Burger(Equation1D):
         Computes the interior diffusive fluxes (nu * u_xx)
         which is D @ (nu * D @ u), where nu is the viscocity
         """
-        return elem.D_phys.dot(self.nu * elem.D_phys.dot(elem.u))
+        nu = self.nu
+        eps = elem.av_eps
+        nu_sum = nu + eps
+        return elem.D_phys.dot(nu_sum * elem.D_phys.dot(elem.u))
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float): 
         """

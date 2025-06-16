@@ -1,6 +1,7 @@
 
 import numpy as np 
-from SBP.mesh_1d import Element1D
+#from SBP.mesh_1d import Element1D
+
 
 
 def nodal_to_modal(u:np.ndarray, w:np.ndarray, V:np.ndarray):

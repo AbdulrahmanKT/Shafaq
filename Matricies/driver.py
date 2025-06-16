@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from SBP.legendre import * 
 from SBP.mesh_1d import * 
 from SBP.Equations import *
+import SBP.Shock # For using the shock capturing
 
 
 # --- 1) Problem parameters ---
@@ -11,8 +12,8 @@ Lx      = 5           # domain length
 nex     = 200           # number of elements
 poly_p  = 7              # polynomial degree (n)
 t_final = 1          # final time
-dt      = 1e-5
-plot_every = 10000
+dt      = 1e-3
+plot_every = 10
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -27,7 +28,7 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 1
-nu   = 1e-2     # viscosity
+nu   = 0     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
 eq   = Burger(c_off=1, nu=nu, v_off=v_off)
@@ -44,7 +45,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref, equation=eq)
+              Q_ref=Q_ref, equation=eq, shock_capture=True)
 
 ######---------------#######
 # Initial Condition 
@@ -102,6 +103,7 @@ fig, ax = plt.subplots(figsize=(20,5))
 mesh.plot(ax=ax)
 times = []
 energies = []
+
 while t < t_final:
     if t + dt > t_final:  # final short step
         dt = t_final - t
@@ -129,6 +131,7 @@ while t < t_final:
     
     times.append(t)
     E = mesh.total_energy_normalized()
+
     energies.append(E)
     print("===================================================")
     print(f"t = {t:.4f},  E = {E:.6e}")

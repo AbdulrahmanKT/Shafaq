@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 import SBP as sb
-
+from . import Shock
 
 
 
@@ -227,12 +227,12 @@ class Mesh1D:
         
 
         # Shock Capturing 
-        self.shock_capture = shock_capture # This option controls if the shock capturing is initialzed
-        if self.shock_capture == True: 
+        self.use_shock_capture = shock_capture # This option controls if the shock capturing is initialzed
+        if self.use_shock_capture == True: 
             self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
         self.s0 = np.log(1/self.n**4)
         self.kappa = 1 
-        self.eps_max = 0.01    
+        self.eps_max = 0.1    
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -391,6 +391,8 @@ class Mesh1D:
         # 1) Save each element's current u  →  U0[e]
         U0 = [elem.u.copy() for elem in self.elements]
 
+        # 1.1) Determine shock capturing once
+        self.shock_capture()
         # helper to compute gL, gR, duL_n, duR_n for element e
         def face_data(e):
             left_id, right_id = (e-1)%NE, (e+1)%NE
@@ -473,13 +475,9 @@ class Mesh1D:
         eps_max = self.eps_max
 
         for elem in self.elements: 
-            a = Shock.nodal_to_modal(u=self.u,w=w,V=V)
+            a = Shock.nodal_to_modal(u=elem.u,w=w,V=V)
             elem.S = Shock.perrson_sensor(a=a)
             elem.av_eps = Shock.av(elem.S, s0=s0, kappa=kappa, e0=eps_max)
-
-
-
-
 
 #######################################
 ############ Meshing
