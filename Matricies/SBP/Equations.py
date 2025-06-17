@@ -124,7 +124,7 @@ class Advection(Equation1D):
         jump_duR =   -duR + dgr   # Jump in the gradient in the right face 
         jump_uL  =    ul  - gl    # Jump in the state variables on the left face
         jump_uR  =   -ur  + gr    # Jump in the state variables on the right face
-        nu       =    self.nu
+        nu       =    self.nu + elem.av_eps
         # Inviscid SAT Arithmatic
         tau_left     = -self.a / 2 # Linear Penalty proposional to the advection strength
         tau_right    =  self.a / 2 # Linear Penalty proposional to the advection strength
@@ -191,7 +191,7 @@ class Burger(Equation1D):
         jump_duR =   -duR + dgr   # Jump in the gradient in the right face 
         jump_uL  =    ul  - gl    # Jump in the state variables on the left face
         jump_uR  =   -ur  + gr    # Jump in the state variables on the right face
-        nu       =    self.nu
+        nu       =    self.nu + elem.av_eps
         # Inviscid SAT Arithmatic
         tau_left     = -np.abs((ul + gl))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
         tau_right    =  np.abs((ur + gr))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength

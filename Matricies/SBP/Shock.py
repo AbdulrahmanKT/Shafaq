@@ -38,7 +38,7 @@ def perrson_sensor(a:np.ndarray,kill_mode:int = -1,  eps:float = 1e-30) -> float
     a2 = np.dot(a,a) + eps # Denomenator
     S = a[kill_mode]**2/ a2
     S = max(S, eps) # To avoid inf
-    return np.log(S)
+    return np.log10(S)
 
 def av(s:float, s0:float = np.log(1/3**4), kappa:float = 1, e0: float = 1e-1): 
     """
@@ -47,8 +47,14 @@ def av(s:float, s0:float = np.log(1/3**4), kappa:float = 1, e0: float = 1e-1):
     s0      : float,                      — AV shock threshold
     kappa   : float,                      — AV smoothing range 
     """
-    return np.where(s<s0 - kappa, 0.0, 
-                    np.where((s > s0 - kappa) & (s < s0 + kappa), 
-                             e0*0.5*(1 + np.sin(np.pi*(s - s0)/(2 * kappa))), e0))
-
+    #return np.where(s<= (s0 - kappa), 0.0, 
+    #                np.where((s >= s0 - kappa) & (s < s0 + kappa), 
+    #                         e0*0.5*(1 + np.sin(np.pi*(s - s0)/(2 * kappa))), e0))
+    return np.float64(np.where(
+        s <= (s0 - kappa),          0.0,
+        np.where(
+            s >= (s0 + kappa),      e0,
+            e0 * 0.5 * (1.0 + np.sin(np.pi * (s - s0) / (2.0 * kappa)))
+        )
+    ))
 

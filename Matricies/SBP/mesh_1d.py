@@ -230,9 +230,9 @@ class Mesh1D:
         self.use_shock_capture = shock_capture # This option controls if the shock capturing is initialzed
         if self.use_shock_capture == True: 
             self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
-        self.s0 = -3 #np.log(1/self.n**4)
-        self.kappa = 0.2 
-        self.eps_max = 0.1    
+        self.s0 = -0.6 #np.log(1/self.n**4)
+        self.kappa = 0.1 
+        self.eps_max = 0.001    
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -405,12 +405,14 @@ class Mesh1D:
             return gL, gR, duL_n, duR_n
 
         # 2) Stage 1: compute K1 = RHS(u^n)
+        self.shock_capture()
         for e, elem in enumerate(self.elements):
             gL, gR, duL_n, duR_n = face_data(e)
             elem.element_rhs(gL, gR, duL_n, duR_n)  # uses self.nu internally
             elem.K1 = elem.rhs.copy()
 
         # 3) Stage 2: u = U0 + (dt/2)*K1; compute K2
+        self.shock_capture()
         for e, elem in enumerate(self.elements):
             elem.u = U0[e] + 0.5*dt*elem.K1
         for e, elem in enumerate(self.elements):
@@ -419,6 +421,7 @@ class Mesh1D:
             elem.K2 = elem.rhs.copy()
 
         # 4) Stage 3: u = U0 + (dt/2)*K2; compute K3
+        self.shock_capture()
         for e, elem in enumerate(self.elements):
             elem.u = U0[e] + 0.5*dt*elem.K2
         for e, elem in enumerate(self.elements):
@@ -427,6 +430,7 @@ class Mesh1D:
             elem.K3 = elem.rhs.copy()
 
         # 5) Stage 4: u = U0 + dt*K3; compute K4
+        self.shock_capture()
         for e, elem in enumerate(self.elements):
             elem.u = U0[e] +     dt*elem.K3
         for e, elem in enumerate(self.elements):
@@ -435,6 +439,7 @@ class Mesh1D:
             elem.K4 = elem.rhs.copy()
 
         # 6) Final update: u = U0 + (dt/6)(K1+2K2+2K3+K4)
+        self.shock_capture()
         for e, elem in enumerate(self.elements):
             elem.u = (
                 U0[e]
@@ -449,7 +454,7 @@ class Mesh1D:
         E = 0.0
         for elem in self.elements:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
-            E += elem.u @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
+            E += elem.u.T @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
         return E / self.E0      
 # ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:
@@ -465,7 +470,7 @@ class Mesh1D:
     def shock_capture(self): 
         """Computes the Persson Sensor and the Artificial Viscocity. 
         Stores the AV in elem.av_eps."""
-        if not self.shock_capture:
+        if not self.use_shock_capture:
             return                           # This option exits early when this option is not true
         
         V = self.V 
@@ -478,12 +483,16 @@ class Mesh1D:
             a = Shock.nodal_to_modal(u=elem.u,w=w,V=V)
             elem.S = Shock.perrson_sensor(a=a)
             elem.av_eps = Shock.av(elem.S, s0=s0, kappa=kappa, e0=eps_max)
-# -----------------------------------------------------------------------------\
-    #def print_max_av(self) -> float:
-    #   """Finds the maximum av value.
-    #   """
-    #   av = 0
-    #   for elem in self.elements: 
+# -----------------------------------------------------------------------------
+    def print_av(self) -> float:
+       """Prints a field of AV values accross all elements.
+       """
+       return np.vstack([elem.av_eps for elem in self.elements])
+# -----------------------------------------------------------------------------
+    def print_S(self) -> float:
+       """Prints a field of AV values accross all elements.
+       """
+       return np.vstack([elem.S for elem in self.elements])
            
 #######################################
 ############ Meshing

@@ -9,11 +9,11 @@ import SBP.Shock # For using the shock capturing
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 20           # number of elements
-poly_p  = 7              # polynomial degree (n)
+nex     = 10           # number of elements
+poly_p  = 9              # polynomial degree (n)
 t_final = 1          # final time
-dt      = 1e-3
-plot_every = 10
+dt      = 1e-5
+plot_every = 100
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -27,8 +27,8 @@ Q_ref = sbp_q(n)
 #  eq = BurgersEquation(base_nu=base_nu, sensor_fn=None)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
-a    = 1
-nu   = 0.0001     # viscosity
+a    = 0.5
+nu   = 0.00001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
 eq   = Burger(c_off=1, nu=nu, v_off=v_off)
@@ -69,10 +69,10 @@ def ivbc(x):
     return u
 
 def constant(x): 
-    return np.zeros_like(x)
+    return np.ones_like(x)
 
-def gaussian(x, mu=3, sigma=0.3):
-    return np.exp(-((x - mu)**2) / (2 * sigma**2))
+def gaussian(x, mu=3, sigma=0.02):
+    return 0.8*np.exp(-((x - mu)**2) / (2 * sigma**2))
 
 
 mesh.set_initial_condition(gaussian)
@@ -86,14 +86,14 @@ for i, elem in enumerate(mesh.elements):
     #ax.plot(elem.x, elem.rhs, "o", label="Total RHS")
     ax.grid(True)
 ax.set_title(" Initial Condition")
-ax.set_ylim(-2, 2.0)
+ax.set_ylim(-0.01, 0.5)
 ax.grid(True)
 plt.tight_layout()
 
 
 # --- 4) Determine stable dt via max wave-speed ---
 dx_elem = Lx / nex
-u_max   = np.max([np.max(np.abs(elem.u)) for elem in mesh.elements])
+#u_max   = np.max([np.max(np.abs(elem.u)) for elem in mesh.elements])
 
 # --- 5) Time‐stepping loop using RK4 ---
 t = 0.0
@@ -115,16 +115,20 @@ while t < t_final:
     ax.grid(True)
     ax.set_xlabel("x")
     ax.set_ylabel("u")
-    ax.set_ylim(-2, 2.0)
+    ax.set_ylim(-2, 1)
+    ax.legend()
     if it % plot_every == 0:
         for i, elem in enumerate(mesh.elements):
             ax.plot(elem.x, elem.u, label="Solution")
+            ax.plot(elem.x, 1000*elem.av_eps*np.ones_like(elem.x),"*", label="AV")
+            #ax.plot(elem.x, elem.S*np.ones_like(elem.x), label="Sensor")
             #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
             #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
             #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
             ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
         plt.pause(1/10000)
         plt.tight_layout()
+
         #plt.savefig("Final_Step.png")
     #ax.plot( mesh.total_energy(), label="Total Energy")
     
@@ -135,6 +139,7 @@ while t < t_final:
     energies.append(E)
     print("===================================================")
     print(f"t = {t:.4f},  E = {E:.6e}")
+    print(f"Max AV = {np.max(mesh.print_av())}")
     print("===================================================")
    
 #ax.legend()
@@ -150,3 +155,4 @@ plt.xlabel("Time")
 plt.ylabel("Total Energy of the System")
 plt.grid(True)
 plt.show()
+
