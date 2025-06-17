@@ -36,7 +36,7 @@ def perrson_sensor(a:np.ndarray,kill_mode:int = -1,  eps:float = 1e-30) -> float
     Note: The sensor essentially wants to compare the energy in the highest mode to the total energy. 
     """
     a2 = np.dot(a,a) + eps # Denomenator
-    S = a[kill_mode]**2/ a2
+    S = (a[kill_mode]**2 )/ a2
     S = max(S, eps) # To avoid inf
     return np.log10(S)
 

@@ -8,8 +8,8 @@ import SBP.Shock # For using the shock capturing
 
 
 # --- 1) Problem parameters ---
-Lx      = 5           # domain length
-nex     = 10           # number of elements
+Lx      = 4           # domain length
+nex     = 11           # number of elements
 poly_p  = 9              # polynomial degree (n)
 t_final = 1          # final time
 dt      = 1e-5
@@ -28,7 +28,7 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 0.5
-nu   = 0.00001     # viscosity
+nu   = 0.0     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
 eq   = Burger(c_off=1, nu=nu, v_off=v_off)
@@ -115,17 +115,18 @@ while t < t_final:
     ax.grid(True)
     ax.set_xlabel("x")
     ax.set_ylabel("u")
-    ax.set_ylim(-2, 1)
-    ax.legend()
+    ax.set_ylim(-0.5, 1)
+    
     if it % plot_every == 0:
         for i, elem in enumerate(mesh.elements):
             ax.plot(elem.x, elem.u, label="Solution")
             ax.plot(elem.x, 1000*elem.av_eps*np.ones_like(elem.x),"*", label="AV")
-            #ax.plot(elem.x, elem.S*np.ones_like(elem.x), label="Sensor")
+            ax.plot(elem.x, elem.S*np.ones_like(elem.x), label="Sensor")
             #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
             #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
             #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
             ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
+
         plt.pause(1/10000)
         plt.tight_layout()
 

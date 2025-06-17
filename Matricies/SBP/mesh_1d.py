@@ -230,7 +230,7 @@ class Mesh1D:
         self.use_shock_capture = shock_capture # This option controls if the shock capturing is initialzed
         if self.use_shock_capture == True: 
             self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
-        self.s0 = -0.6 #np.log(1/self.n**4)
+        self.s0 = -0.5 #np.log(1/self.n**4)
         self.kappa = 0.1 
         self.eps_max = 0.001    
         # build physical elements
