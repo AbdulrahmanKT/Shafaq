@@ -30,7 +30,7 @@ def nodal_to_modal(u:np.ndarray, w:np.ndarray, V:np.ndarray):
 def perrson_sensor(a:np.ndarray,kill_mode:int = -1,  eps:float = 1e-30) -> float: 
     """
     Calculates the Persson and Peraire from a vector of modal coefficients. 
-    a : array, shape (n+1,)  — modal values
+    a : array, shape (n+1,)  — modal valuesz
     kill_mode : float, scalar — determines the mode to be killed. 
     
     Note: The sensor essentially wants to compare the energy in the highest mode to the total energy. 
