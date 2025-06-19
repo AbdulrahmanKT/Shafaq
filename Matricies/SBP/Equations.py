@@ -126,9 +126,14 @@ class Advection(Equation1D):
         jump_uR  =   -ur  + gr    # Jump in the state variables on the right face
         nu       =    self.nu + elem.av_eps
         # Inviscid SAT Arithmatic
-        tau_left     = -self.a / 2 # Linear Penalty proposional to the advection strength
+        tau_left     =  self.a / 2 # Linear Penalty proposional to the advection strength
         tau_right    =  self.a / 2 # Linear Penalty proposional to the advection strength
         sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
+        
+
+
+
+
 
         # Viscous SAT Arithmatic 
         sat_visc_L = (0.5*nu*jump_duL + 0.5*nu*jump_uL) * elem.el # Calculation of the left Viscous SAT
@@ -190,12 +195,31 @@ class Burger(Equation1D):
         jump_duL =    duL - dgl   # Jump in the gradient in the left face 
         jump_duR =   -duR + dgr   # Jump in the gradient in the right face 
         jump_uL  =    ul  - gl    # Jump in the state variables on the left face
-        jump_uR  =   -ur  + gr    # Jump in the state variables on the right face
+        jump_uR  =   (-ur  + gr)    # Jump in the state variables on the right face
         nu       =    self.nu + elem.av_eps
-        # Inviscid SAT Arithmatic
-        tau_left     = -np.abs((ul + gl))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
-        tau_right    =  np.abs((ur + gr))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
-        sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
+        # My first implementation of the Inviscid SAT Arithmatic
+        #tau_left     = -np.abs((ul + gl))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
+        #tau_right    =  np.abs((ur + gr))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
+        #sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
+        
+        # Another Approach
+        #f_star_L = 0.25 * (ul**2 + gl**2)
+        #f_star_R = 0.25 * (ur**2 + gr**2)
+        #sat_L = (f_star_L - 0.5 * ul**2) * elem.el
+        #sat_R = (f_star_R - 0.5 * ur**2) * elem.er
+        #sat_inv = self.c_off * (sat_L + sat_R)
+
+
+        # Entropy Conservative flux function Fec(u,g) - F(u) 
+        tau_left     =  np.abs((ul + gl)) / 2.0 # Linear Penalty proposional to the convection strength
+        tau_right    =  np.abs((ur + gr)) / 2.0 # Linear Penalty proposional to the convection strength
+        diss_l       =  tau_left*(ul-gl)
+        diss_r       =  tau_right*(ur-gr)
+        sat_L = -(1/6 * (ul**2 + ul*gl + gl**2)  - diss_l - 0.5*ul**2)*elem.el
+        sat_R = (1/6 * (ur**2 + ur*gr + gr**2)  - diss_r - 0.5*ur**2)*elem.er 
+        sat_inv = self.c_off*(sat_L + sat_R)
+
+
 
         # Viscous SAT Arithmatic 
         sat_visc_L = (0.5*nu*jump_duL + 0.5*nu*jump_uL) * elem.el # Calculation of the left Viscous SAT

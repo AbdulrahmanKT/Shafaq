@@ -9,8 +9,8 @@ import SBP.Shock # For using the shock capturing
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 11           # number of elements
-poly_p  = 9              # polynomial degree (n)
+nex     = 10           # number of elements
+poly_p  = 8              # polynomial degree (n)
 t_final = 1          # final time
 dt      = 1e-4
 plot_every = 100
@@ -28,7 +28,7 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 1
-nu   = 0.0     # viscosity
+nu   = 0.0001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
 eq   = Burger(c_off=1, nu=nu, v_off=v_off)
@@ -45,7 +45,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref, equation=eq, shock_capture=False)
+              Q_ref=Q_ref, equation=eq, shock_capture=True)
 
 ######---------------#######
 # Initial Condition 
@@ -120,8 +120,8 @@ while t < t_final:
     if it % plot_every == 0:
         for i, elem in enumerate(mesh.elements):
             ax.plot(elem.x, elem.u, label="Solution")
-            #ax.plot(elem.x, 1000*elem.av_eps*np.ones_like(elem.x),"*", label="AV")
-            #ax.plot(elem.x, elem.S*np.ones_like(elem.x), label="Sensor")
+            ax.plot(elem.x, 100*elem.av_eps*np.ones_like(elem.x),"--", label="AV")
+            #ax.plot(elem.x, -elem.S*np.ones_like(elem.x), label="Sensor")
             #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
             #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
             #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
