@@ -197,10 +197,12 @@ class Burger(Equation1D):
         jump_uL  =    ul  - gl    # Jump in the state variables on the left face
         jump_uR  =   (-ur  + gr)    # Jump in the state variables on the right face
         nu       =    self.nu + elem.av_eps
+        normal_left = -1 
+        normal_right = 1
         # My first implementation of the Inviscid SAT Arithmatic
-        #tau_left     = -np.abs((ul + gl))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
-        #tau_right    =  np.abs((ur + gr))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
-        #sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
+        tau_left     = -np.abs((ul + gl))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
+        tau_right    =  np.abs((ur + gr))*self.c_off / 2.0 # Linear Penalty proposional to the convection strength
+        sat_inv      =  tau_left*(ul - gl)*elem.el + tau_right*(ur - gr)*elem.er # Weak enforcement of the inviscid fluxes
         
         # Another Approach
         #f_star_L = 0.25 * (ul**2 + gl**2)
@@ -208,24 +210,48 @@ class Burger(Equation1D):
         #sat_L = (f_star_L - 0.5 * ul**2) * elem.el
         #sat_R = (f_star_R - 0.5 * ur**2) * elem.er
         #sat_inv = self.c_off * (sat_L + sat_R)
-
-
-        # Entropy Conservative flux function Fec(u,g) - F(u) 
-        tau_left     =  np.abs((ul + gl)) / 2.0 # Linear Penalty proposional to the convection strength
-        tau_right    =  np.abs((ur + gr)) / 2.0 # Linear Penalty proposional to the convection strength
-        diss_l       =  tau_left*(ul-gl)
-        diss_r       =  tau_right*(ur-gr)
-        sat_L = -(1/6 * (ul**2 + ul*gl + gl**2)  - diss_l - 0.5*ul**2)*elem.el
-        sat_R = (1/6 * (ur**2 + ur*gr + gr**2)  - diss_r - 0.5*ur**2)*elem.er 
-        sat_inv = self.c_off*(sat_L + sat_R)
-
-
-
-        # Viscous SAT Arithmatic 
-        sat_visc_L = (0.5*nu*jump_duL + 0.5*nu*jump_uL) * elem.el # Calculation of the left Viscous SAT
-        sat_visc_R = (0.5*nu*jump_duR + 0.5*nu*jump_uR) * elem.er # Calculation of the right Viscous SAT
         
-        # Forming the Total SAT for the Advection Equation
-        sat_total = self.c_off*sat_inv + self.v_off*(sat_visc_L + sat_visc_R) 
-        sat_rhs = elem.P_inv.dot(sat_total)
-        return sat_rhs
+        ##################################################################################################
+        ## The following chunk was the second iteration ##
+        ## Entropy Conservative flux function Fec(u,g) - F(u) 
+        #tau_right    =  np.abs((ur + gr)) / 2.0 # Linear Penalty proposional to the convection strength
+        #tau_left     =  np.abs((ul + gl)) / 2.0 # Linear Penalty proposional to the convection strength
+        #diss_l       =  tau_left*(ul-gl)
+        #diss_r       =  -tau_right*(ur-gr)
+        #sat_L = (1/6 * (ul**2 + ul*gl + gl**2)  - diss_l - 0.5*ul**2)*elem.el
+        #sat_R = (1/6 * (ur**2 + ur*gr + gr**2)  - diss_r - 0.5*ur**2)*elem.er 
+        #sat_inv = self.c_off*(sat_L + sat_R)
+
+
+
+        ## Viscous SAT Arithmatic 
+        #sat_visc_L = (0.5*nu*jump_duL + 0.5*nu*jump_uL) * elem.el # Calculation of the left Viscous SAT
+        #sat_visc_R = (0.5*nu*jump_duR + 0.5*nu*jump_uR) * elem.er # Calculation of the right Viscous SAT
+        
+        ## Forming the Total SAT for the Advection Equation
+        #sat_total = self.c_off*sat_inv + self.v_off*(sat_visc_L + sat_visc_R) 
+        #sat_rhs = elem.P_inv.dot(sat_total)
+        ##################################################################################################
+        
+        # Inviscid SAT - Using an entropy Stable formilation
+        #tau_l = np.abs(ul+gl)
+        #tau_r = np.abs(ur+gr)
+        #f_ssr_l = (1/6)*(ul*gl + ul**2 + gl**2) - tau_l*(gl - ul) # using the convention that flow goes from left to right 
+        #f_ssr_r = (1/6)*(ur*gr + ur**2 + gr**2) - tau_r*(gr - ur) # using the convention that flow goes from left to right 
+        #sat_inv_l = f_ssr_l*normal_left*elem.el # This sat is on the left face
+        #sat_inv_r = f_ssr_r*normal_right*elem.er # This sat is on the right face
+        #sat_inv = self.c_off*elem.P_inv@(sat_inv_l + sat_inv_r)
+        
+        # Viscous SAT - Using Symmetric IP SAT 
+        jump_left  = nu*(gl - ul)
+        jump_right = nu*(gr - ur)
+        sat_visc_l = normal_left*jump_left*elem.el # Since for diffusion, no need to take the minus, testing is happening
+        sat_visc_r = normal_right*jump_right*elem.er
+        sat_visc = elem.P_inv@(sat_visc_l+ sat_visc_r)
+        
+        return sat_visc + self.c_off*sat_inv 
+      
+      
+      
+      
+      

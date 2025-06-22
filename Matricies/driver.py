@@ -9,10 +9,10 @@ import SBP.Shock # For using the shock capturing
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 10           # number of elements
+nex     = 8           # number of elements
 poly_p  = 8              # polynomial degree (n)
-t_final = 1          # final time
-dt      = 1e-4
+t_final = 100          # final time
+dt      = 1e-2
 plot_every = 100
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
@@ -30,8 +30,9 @@ Q_ref = sbp_q(n)
 a    = 1
 nu   = 0.0001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
+c_off = 0      # turn convection SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
-eq   = Burger(c_off=1, nu=nu, v_off=v_off)
+eq   = Burger(c_off=c_off, nu=nu, v_off=v_off)
 
 
 
@@ -45,7 +46,7 @@ mesh = Mesh1D(x_min=0.0,
               w=w,
               D_ref=D_ref,
               P_ref=P_ref,
-              Q_ref=Q_ref, equation=eq, shock_capture=True)
+              Q_ref=Q_ref, equation=eq, shock_capture=False)
 
 ######---------------#######
 # Initial Condition 
@@ -115,12 +116,12 @@ while t < t_final:
     ax.grid(True)
     ax.set_xlabel("x")
     ax.set_ylabel("u")
-    ax.set_ylim(-0.5, 1)
+    ax.set_ylim(-2, 2)
     
     if it % plot_every == 0:
         for i, elem in enumerate(mesh.elements):
             ax.plot(elem.x, elem.u, label="Solution")
-            ax.plot(elem.x, 100*elem.av_eps*np.ones_like(elem.x),"--", label="AV")
+            #ax.plot(elem.x, 100*elem.av_eps*np.ones_like(elem.x),"--", label="AV")
             #ax.plot(elem.x, -elem.S*np.ones_like(elem.x), label="Sensor")
             #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
             #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")

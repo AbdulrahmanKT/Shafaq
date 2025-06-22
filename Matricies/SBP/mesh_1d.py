@@ -55,7 +55,7 @@ class Element1D:
         self.P_phys  = P_ref * h         # ∫_x = ∫_ξ J dξ
         self.Q_phys  = self.P_phys.dot(self.D_phys) # Notice the use of the physical operators 
         self.P_inv   = (1/self.J)*np.linalg.inv(self.P_ref)
-        self.el      = -np.eye(self.n + 1)[0] # Using the E operator that is consistant with SBP theory 
+        self.el      = np.eye(self.n + 1)[0] # Using the E operator that is consistant with SBP theory 
         self.er      = np.eye(self.n + 1)[-1] # Using the E operator that is consistant with SBP theory
         # shock capturing 
         self.av_eps = 0        # This is the initialization of artificial viscocity to be added
@@ -220,7 +220,7 @@ class Mesh1D:
         self.D_ref = D_ref.copy()
         self.P_ref = P_ref.copy()
         self.Q_ref = Q_ref.copy()
-        self.el    = -np.eye(self.n + 1)[0]
+        self.el    = np.eye(self.n + 1)[0]
         self.er    = np.eye(self.n + 1)[-1]
         self.E0    = 6 # This Quantity is to normalize the total energy
         self.equation = equation  # Store the equation to be solved
@@ -229,8 +229,8 @@ class Mesh1D:
         # Shock Capturing 
         self.use_shock_capture = shock_capture # This option controls if the shock capturing is initialzed
         if self.use_shock_capture == True: 
-            self.V = np.polynomial.legendre.legvander(self.xi, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
-        self.s0 = -0.1 #np.log(1/self.n**4)
+            self.V = sb.legendre.Vmonde_orthonormal(self.xi, self.w, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
+        self.s0 = -1 #np.log(1/self.n**4)
         self.kappa = 1 
         self.eps_max = 0.01    
         # build physical elements
