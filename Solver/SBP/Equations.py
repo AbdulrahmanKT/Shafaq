@@ -19,7 +19,7 @@ class Equation1D(ABC):
     """
 
     @abstractmethod
-    def inviscid_flux(self, element): 
+    def volume_flux(self, element): 
         """
         Compute the inviscid (or advective) flux‐derivative RHS for thias element.
 
@@ -166,13 +166,13 @@ class Burger(Equation1D):
         self.nu    = nu
         self.v_off = v_off
 
-    def inviscid_flux(self, elem: Element1D): 
+    def volume_flux(self, elem: Element1D): 
         """
         Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return f_burger_ec(elem.n, elem.Q_phys, elem.u) * self.c_off
+        return f_burger_ec(elem.n, elem.Q_phys, elem.u) * self.c_off + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
     
     def viscous_aux(self, elem: Element1D, gl:float, gr:float): 
         """
@@ -193,9 +193,6 @@ class Burger(Equation1D):
             Length ``n+1`` vector `theta` ≈ ∂ₓu on the element.
         """
         # Defining the relevant variables 
-        nu = self.nu
-        eps = elem.av_eps
-        nu_sum = nu + eps
         kl       = -1    # Normal to the left face of element k 
         kr       =  1    # Normal to the right face of element k
         el       = elem.el 
@@ -221,22 +218,34 @@ class Burger(Equation1D):
         dgr => Gradient of the gr at the right interface
         av_l => av value at the left ghost cell
         av_r => av value at the right ghost cell
-        """
+
+        For the coupling of the IP term, the following the dalcin recipe is followed: 
+          IP = P^-1 ((1/2)*\lambda_v (w_l - w_gl)el + (1/2)*\lambda_v (w_r - w_gr)er)
+
+          1 - Rotate from primitive variables to the entropy variables
+          2 - Take the difference in the normal direction of the face (This is important in higher dimensions 2D or 3D). 
+          3 - Rotate back to the primitive variables. 
+          4 - Construct the Lambda_V = L (from Parsani Discontious Interfaces paper) => L(ui, gi) = -B(c_ui + c_gi)/det(J) -> B = 1, c_ui and c_gi is the element viscocity at that interface.    
+          5 - Form IP term for every interface.      
+          """
         # Definition of Variables
         ul, ur   = elem.left_boundary(), elem.right_boundary() # Extracting the element boundaries
         nu       =    self.nu + elem.av_eps
+        nu_l     =    self.nu + av_l 
+        nu_r     =    self.nu + av_r       
         kl       = -1    # Normal to the left face of element k 
         kr       =  1    # Normal to the right face of element k
         el       = elem.el 
         er       = elem.er
         du       = elem.du # The gradients are stored element wise - this method assumes that they have been calculated by viscous_aux
-
+        J        = elem.J  # Determinante of the jacobian of the element
         # Forming the rhs
         sat_inv  = (kr*(f_burger(ur)-f_ssr_meriam(ur,gr,ur,gr,f_burger_ec))*er                # Right Interface Flux -> SAT_inv_r
                    + kl*(f_burger(ul)-f_ssr_meriam(ul,gl,ul,gl,f_burger_ec))*el)             # Left Interface Flux -> SAT_inv_l
-        sat_visc = (kr*(1/2)*(nu*du[-1]))*er + (kl*(1/2)*(nu*du[0]))*el
+        sat_visc = ((kr*(1/2)*(nu*du[-1] - nu_r*dgr) + IP_term_burger(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
+                    + (kr*(1/2)*(nu*du[0] - nu_l*dgl) + IP_term_burger(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
         
-        return sat_visc + self.c_off*sat_inv 
+        return elem.P_inv@ (sat_visc + self.c_off*sat_inv) 
       
       
       

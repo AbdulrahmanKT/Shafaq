@@ -129,17 +129,34 @@ def f_burger_ec_vol(Q: NDArray[np.float64],
     """
     return -2.0 * (Q * F_ec).sum(axis=1)
 
-
-
-
-
 def f_ssr_meriam(u_int:float | NDArray[np.float64],
                  g_int:float | NDArray[np.float64], 
                  w_uint:float | NDArray[np.float64], 
                  w_gint:float | NDArray[np.float64],
                  f_ec:callable[...,float]):
-    """Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
+    """
+    Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
     Using the merriam convention. 
     """
     f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(u_int)*(w_uint - w_gint) # This is the Entroy stable interface flux using Merriam speed for the upwinding
     return f_ssr
+
+def IP_term_burger( nu_i:float, nu_gi:float , det_J:float, B:float = 1): 
+    """ This function calculates the lamda_V or the L term (from Fisher and Carpenter or Parsani Discontinous Interfaces respectivly)). 
+    
+    Parameters
+    ----------
+
+    nu_i : float
+        Viscous term at the ith interface of the kth element. 
+    nu_gi : float
+        Viscous term at the ith interface of the neighbor to kth element. 
+    
+    det_J : float
+        Determinent of the interface. 
+    Returns
+    -------
+    L : float
+        The IP term. 
+    """
+    return -B*(nu_i + nu_gi)/det_J
