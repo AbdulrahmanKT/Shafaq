@@ -4,13 +4,64 @@ fluxes.py
 Elementary numerical‐flux functions used in finite-volume / DG
 schemes for 1-D scalar conservation laws.
 
-All routines are fully vectorised: if *u* is an array, the
-operations are applied element-wise without Python loops.
+Defining fluxes here, will allow for the Equations class to "grab" a flux type and use it in the solver.
 """
 
-from __future__ import annotations  # for Python <3.11
+# Imports       -----------------------------------------------------
+from abc import ABC, abstractmethod
 import numpy as np
 from numpy.typing import NDArray
+from __future__ import annotations  # for Python <3.11
+
+class Flux(ABC):
+    """Interface all concrete fluxes must satisfy."""
+    @abstractmethod
+    def flux(self, u): ...
+    @abstractmethod
+    def flux_ec(self, u1: NDArray, u2: NDArray): ...
+    @abstractmethod
+    def flux_ec_vol(self, Q: NDArray, u :NDArray): ...
+
+# ---------- Burgers --------------------------------------------
+class BurgerFlux(Flux):
+    
+    def f_burger(u: NDArray[np.float64]) -> NDArray[np.float64]:
+        """
+        Element-wise nonlinear **Burger’s** flux *f(u) = ½ u²*.
+
+        Parameters
+        ----------
+        u : array_like
+            State values.
+
+        Returns
+        -------
+        ndarray
+            `0.5 * u**2`, same shape as *u*.
+        """
+        return 0.5 * u ** 2
+    
+
+    def ec_volume(self, Q, u):
+        F = self.ec_interface(u[:, None], u[None, :])
+        return -2.0 * np.einsum('ij,ij->i', Q, F)      # (n+1,)
+    def stable_interface(self, uL, uR):
+        lam = max(abs(uL), abs(uR))                    # Merriam λ
+        return self.ec_interface(uL, uR) - 0.5*lam*(uR - uL)
+
+# ---------- Linear advection -----------------------------------
+class AdvectiveFlux(Flux):
+    def __init__(self, a: float): self.a = float(a)
+    def ec_interface(self, uL, uR):
+        return 0.5 * self.a * (uL + uR)
+    def ec_volume(self, Q, u):
+        return -self.a * (Q @ u)                       # analytic contraction
+    def stable_interface(self, uL, uR):
+        return self.ec_interface(uL, uR) - 0.5*abs(self.a)*(uR - uL)
+
+
+
+
 
 
 # ----------------------------------------------------------------------
@@ -56,7 +107,12 @@ def f_adv_ec(a: float,
     ndarray
         Central flux of the same broadcasted shape as `np.broadcast(u_L, u_R)`.
     """
-    return 0.5 * a * (u_L + u_R)
+    return 0.5 * a * (u_L[:,None] + u_R[None,:])
+
+def f_adv_ec_vol(a: float , Q : NDArray , u: NDArray[np.float64]): 
+
+    f_ec = f_adv_ec(a, u , u)
+    return -2.0 * (Q * f_ec).sum(axis=1)
 
 
 # ----------------------------------------------------------------------
@@ -85,7 +141,7 @@ def f_burger_ec(u1: NDArray[np.float64],
     Entropy-conservative semi-discrete volume term for Burger’s
     equation using the symmetric form
 
-    .. math:: F_{ij} = \\frac16 \\bigl(u_i^2 + u_i u_j + u_j^2\\bigr),
+    .. math:: F_{ij} = \\frac16 \\bigl(u_i^2 + u_i u_j + u_j^2\bigr),
 
     then contracting with the SBP operator *Q*.
 
@@ -130,6 +186,10 @@ def f_burger_ec_vol(Q: NDArray[np.float64],
     F_ec = f_burger_ec(u,u)
     return -2.0 * (Q * F_ec).sum(axis=1)
 
+
+# ----------------------------------------------------------------------
+# 2. f_ssr_meriam and IP penalty 
+# ----------------------------------------------------------------------
 def f_ssr_meriam(u_int:float | NDArray[np.float64],
                  g_int:float | NDArray[np.float64], 
                  w_uint:float | NDArray[np.float64], 

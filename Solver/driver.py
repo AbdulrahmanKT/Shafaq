@@ -31,8 +31,8 @@ a    = 1
 nu   = 0.00001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 c_off = 0      # turn convection SAT on/off (1→on, 0→off)
-#eq   = Advection(a=a, nu=nu, v_off=v_off)
-eq   = Burger(c_off=c_off, nu=nu, v_off=v_off)
+eq   = Advection(a=a, nu=nu, v_off=v_off)
+#eq   = Burger(c_off=c_off, nu=nu, v_off=v_off)
 
 
 
