@@ -125,7 +125,7 @@ class Element1D:
         return self.equation.SAT(self, gl=gl, gr=gr, dgl=dgl, dgr=dgr, av_l=avl, av_r=avr)  
 # -----------------------------------------------------------------------------    
     def volume_flux(self):
-        """This method calculates the RHS contribution from the interior operator (all of the volumetric term).
+        """This method calculates the RHS contribution from the interior operator (all of the volumetric term INV and VISC).
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
 
@@ -386,7 +386,7 @@ class Mesh1D:
             avr = self.elements[right_id].av_eps  # Gradients at the neighboring elements at the left element at the right boundary
             
             # Forming the full rhs
-            elem.rhs = elem.inviscid_flux() + elem.volume_flux() + elem.SAT_rhs(gl, gr, dgl, dgr, avl, avr)
+            elem.rhs = elem.volume_flux() + elem.SAT_rhs( gl, gr, dgl, dgr, avl, avr)
         
 # ----------------------------------------------------------------------------- 
     def export_global_rhs(self) -> np.ndarray:
@@ -406,58 +406,58 @@ class Mesh1D:
         # Then concatenate all element.rhs into one vector
         return np.concatenate([elem.rhs for elem in self.elements])
 # -----------------------------------------------------------------------------       
-def step_rk4(self, dt):
-    """
-    One classical RK4 step of size dt based on mesh.rhs().
-    """
-    # --------  snapshot of the solution ------------------------------------
-    U0 = [elem.u.copy() for elem in self.elements]
+    def step_rk4(self, dt):
+        """
+        One classical RK4 step of size dt based on mesh.rhs().
+        """
+        # --------  snapshot of the solution ------------------------------------
+        U0 = [elem.u.copy() for elem in self.elements]
 
-    # -------------------------------------------------------------------- K1
-    self.shock_capture()        # update artificial-viscosity eps_i
-    self.rhs()                  # fills elem.rhs for all elements
-    for elem in self.elements:
-        elem.K1 = elem.rhs.copy()
+        # -------------------------------------------------------------------- K1
+        self.shock_capture()        # update artificial-viscosity eps_i
+        self.rhs()                  # fills elem.rhs for all elements
+        for elem in self.elements:
+            elem.K1 = elem.rhs.copy()
 
-    # -------------------------------------------------------------------- K2
-    for e, elem in enumerate(self.elements):
-        elem.u = U0[e] + 0.5*dt*elem.K1
-    self.shock_capture()
-    self.rhs()
-    for elem in self.elements:
-        elem.K2 = elem.rhs.copy()
+        # -------------------------------------------------------------------- K2
+        for e, elem in enumerate(self.elements):
+            elem.u = U0[e] + 0.5*dt*elem.K1
+        self.shock_capture()
+        self.rhs()
+        for elem in self.elements:
+            elem.K2 = elem.rhs.copy()
 
-    # -------------------------------------------------------------------- K3
-    for e, elem in enumerate(self.elements):
-        elem.u = U0[e] + 0.5*dt*elem.K2
-    self.shock_capture()
-    self.rhs()
-    for elem in self.elements:
-        elem.K3 = elem.rhs.copy()
+        # -------------------------------------------------------------------- K3
+        for e, elem in enumerate(self.elements):
+            elem.u = U0[e] + 0.5*dt*elem.K2
+        self.shock_capture()
+        self.rhs()
+        for elem in self.elements:
+            elem.K3 = elem.rhs.copy()
 
-    # -------------------------------------------------------------------- K4
-    for e, elem in enumerate(self.elements):
-        elem.u = U0[e] + dt*elem.K3
-    self.shock_capture()
-    self.rhs()
-    for elem in self.elements:
-        elem.K4 = elem.rhs.copy()
+        # -------------------------------------------------------------------- K4
+        for e, elem in enumerate(self.elements):
+            elem.u = U0[e] + dt*elem.K3
+        self.shock_capture()
+        self.rhs()
+        for elem in self.elements:
+            elem.K4 = elem.rhs.copy()
 
-    # ---------------------- final RK4 combine ------------------------------
-    for e, elem in enumerate(self.elements):
-        elem.u = (
-            U0[e] + (dt/6.0)*(elem.K1 + 2*elem.K2 + 2*elem.K3 + elem.K4)
-        )
+        # ---------------------- final RK4 combine ------------------------------
+        for e, elem in enumerate(self.elements):
+            elem.u = (
+                U0[e] + (dt/6.0)*(elem.K1 + 2*elem.K2 + 2*elem.K3 + elem.K4)
+            )
 # -----------------------------------------------------------------------------       
     def total_energy_normalized(self) -> float:
         """
-        Compute  E = 1/2 * sum_e (u_e^T P_phys u_e).
+        Compute  dS/dt.
         """
         E = 0.0
         for elem in self.elements:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
             E += elem.u.T @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
-        return E / self.E0      
+        return E / self.E0
 # ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:
         """

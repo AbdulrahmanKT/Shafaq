@@ -106,7 +106,7 @@ def f_burger_ec(u1: NDArray[np.float64],
 
 
 def f_burger_ec_vol(Q: NDArray[np.float64],
-                F_ec: NDArray[np.float64]) -> NDArray[np.float64]:
+                u: NDArray[np.float64]) -> NDArray[np.float64]:
     """
     Entropy-conservative semi-discrete volume term for Burger’s
     equation using the symmetric form
@@ -127,6 +127,7 @@ def f_burger_ec_vol(Q: NDArray[np.float64],
     ndarray
         Length-`n+1` RHS contribution ``-2 * Q @ F @ 1`` (vector form).
     """
+    F_ec = f_burger_ec(u,u)
     return -2.0 * (Q * F_ec).sum(axis=1)
 
 def f_ssr_meriam(u_int:float | NDArray[np.float64],

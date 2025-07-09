@@ -9,11 +9,11 @@ import SBP.Shock # For using the shock capturing
 
 # --- 1) Problem parameters ---
 Lx      = 5           # domain length
-nex     = 8           # number of elements
-poly_p  = 8              # polynomial degree (n)
+nex     = 100           # number of elements
+poly_p  = 3              # polynomial degree (n)
 t_final = 100          # final time
-dt      = 1e-2
-plot_every = 100
+dt      = 1e-4
+plot_every = 10
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -28,7 +28,7 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 1
-nu   = 0.0001     # viscosity
+nu   = 0.00001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 c_off = 0      # turn convection SAT on/off (1→on, 0→off)
 #eq   = Advection(a=a, nu=nu, v_off=v_off)
@@ -72,11 +72,11 @@ def ivbc(x):
 def constant(x): 
     return np.ones_like(x)
 
-def gaussian(x, mu=3, sigma=0.1):
+def gaussian(x, mu=0.5, sigma=0.1):
     return 0.8*np.exp(-((x - mu)**2) / (2 * sigma**2))
 
 
-mesh.set_initial_condition(gaussian)
+mesh.set_initial_condition(lambda x: np.sin(2*np.pi*x))
 mesh.rhs()
 fig, ax = plt.subplots(figsize=(20,5))
 mesh.plot()
@@ -140,7 +140,7 @@ while t < t_final:
 
     energies.append(E)
     print("===================================================")
-    print(f"t = {t:.4f},  E = {E:.6e}")
+    print(f"t = {t:.4f},  E = {E}")
     print(f"Max AV = {np.max(mesh.print_av())}")
     print("===================================================")
    
