@@ -6,7 +6,7 @@
 ## About
 
 **Shafaq** is a research-grade, high-order Computational Fluid Dynamics (CFD) solver written in Python.  
-Its design centers on **entropy-stable Discontinuous Galerkin (DG)** methods for the 3-D conservation laws, targeting both academic exploration.
+Its design centers on **entropy-stable Discontinuous Galerkin (DG)** methods for conservation laws, targeting both academic exploration.
 
 > *“Just as dusk blends day and night, Shafaq blends numerical rigor with ease of experimentation.”*
 
