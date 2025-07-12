@@ -29,7 +29,7 @@ Its design centers on **entropy-stable Discontinuous Galerkin (DG)** methods for
 
 ```bash
 # Clone
-git clone https://github.com/<your-username>/shafaq.git
+git clone https://github.com/AbdulrahmanKT/shafaq.git
 cd shafaq
 
 # Create environment
