@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 import numpy as np 
-from SBP.mesh_1d import Element1D
-import SBP as sb
-from .fluxes import *
+from Shafaq.mesh_1d import Element1D
+import Shafaq as sb
+from .fluxes import *             ## Contains the Flux class. 
 
 
 
@@ -10,21 +10,21 @@ from .fluxes import *
 
 class Equation1D(ABC): 
     """
-    Abstract base class defining the interface for a 1D PDE.
-    Any concrete subclass must implement:
-      - volume_flux(self, elem):    inviscid/advective contribution
-      - viscous_aux(self, elem):   diffusive (or AV) contribution
-      - SAT(self, elem, left_ghost_u, right_ghost_u, left_ghost_du, right_ghost_du):
-                                        SAT (boundary‐penalty) terms
+    Abstract Class defining the Semi-discrete system. Every Flux class must implement the following: 
+
+          - Flux function. 
+          - Entropy Conservative Flux. 
+          - Entropy Conservative Volume Flux. 
+          - Transformation from Conservative Variables to Entropy variables and vice-versa. 
     """
     def __init__(self,
                  flux:Flux,
                  nu : float,
                  c_off: float):
         
-        self.flux = flux # Inherits flux type
-        self.nu          # 
-        self.c_off
+        self.flux = flux # Inherits flux type (e.g. Burgers, Advecion, Euler)
+        self.nu          # Viscocity of the equation - Later to be defined by another class called viscous fluxes for (NS and Euler)
+        self.c_off       # Coefficient for turning off convection - Debugging
 
 
 
@@ -40,74 +40,6 @@ class Equation1D(ABC):
 
 
     @abstractmethod
-    def viscous_aux(self, elem: Element1D, gl:float, gr:float) -> np.ndarray:
-        """
-        Compute the diffusive‐term RHS (e.g. ∂_x(ν ∂_x u) or AV term) for this element.
-
-        Parameters:
-          elem: an Element1D instance, whose .u and .D_phys are populated.
-
-        Returns:
-          A NumPy array of length (n+1) giving ∂_x( ε(x) ∂_x u ) (or zero if purely advective),
-          evaluated at each node inside the element (excluding SAT penalties).
-        """
-        pass
-
-    @abstractmethod
-    def SAT(
-        self,
-        elem,
-        left_ghost_u: float,
-        right_ghost_u: float,
-        left_ghost_du: float,
-        right_ghost_du: float
-    ) -> np.ndarray:
-        """
-        Compute the SAT (boundary‐penalty) contribution for this element’s RHS.
-
-        Parameters:
-          elem            : an Element1D instance
-          left_ghost_u    : value of u just to the left of this element
-          right_ghost_u   : value of u just to the right of this element
-          left_ghost_du   : ∂_x u just to the left of this element
-          right_ghost_du  : ∂_x u just to the right of this element
-
-        Returns:
-          A NumPy array of length (n+1) containing the SAT terms (inviscid + viscous)
-          that must be added to the interior RHS so that boundary/interface coupling
-          is enforced.
-        """
-        pass
-
-
-
-class Burger(Equation1D): 
-    """
-    1D linear advection with optional diffusion. 
-    Implements:
-      - interior_flux(elem):    –a * ∂_x u
-      - diffusion_term(elem):    ∂_x( ν ∂_x u )
-      - sat_penalty(elem, ...): upwind SAT for advection + SIPG viscous penalties
-    """
-    def __init__(self, c_off: float, nu: float = 0.0, v_off: float = 1.0):
-        """
-        Parameters:
-          c_off : flag (0 or 1) to turn inviscid SAT on/off; multiply inviscid SAT by v_off
-          nu    : constant viscosity (if nu>0, adds diffusion ∂_x(ν ∂_x u))
-          v_off : flag (0 or 1) to turn viscous SAT on/off; multiply viscous SAT by v_off
-        """
-        self.c_off = c_off # This parameter turns off convection
-        self.nu    = nu
-        self.v_off = v_off
-
-    def volume_flux(self, elem: Element1D): 
-        """
-        Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
-        F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
-        """
-        
-        return f_burger_ec_vol(elem.Q_phys, elem.u) * self.c_off + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
-    
     def viscous_aux(self, elem: Element1D, gl:float, gr:float): 
         """
         LDG gradient reconstruction with penalty terms.
@@ -139,6 +71,36 @@ class Burger(Equation1D):
         dw = elem.D_phys@u
         theta = elem.P_inv@(dw +(-kr/2)*(1-kr*alpha)*(grad_rot*u[-1] - grad_rot*gr)*er + (-kl/2)*(1-kl*alpha)*(grad_rot*u[0] - grad_rot*gl)*el) 
         return theta
+    
+
+    @abstractmethod
+    def SAT(
+        self,
+        elem,
+        left_ghost_u: float,
+        right_ghost_u: float,
+        left_ghost_du: float,
+        right_ghost_du: float
+    ) -> np.ndarray:
+        """
+        Compute the SAT (boundary‐penalty) contribution for this element’s RHS.
+
+        Parameters:
+          elem            : an Element1D instance
+          left_ghost_u    : value of u just to the left of this element
+          right_ghost_u   : value of u just to the right of this element
+          left_ghost_du   : ∂_x u just to the left of this element
+          right_ghost_du  : ∂_x u just to the right of this element
+
+        Returns:
+          A NumPy array of length (n+1) containing the SAT terms (inviscid + viscous)
+          that must be added to the interior RHS so that boundary/interface coupling
+          is enforced.
+        """
+        pass
+
+
+
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float, av_l:float, av_r:float): 
         """
