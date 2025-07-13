@@ -36,7 +36,7 @@ class Equation1D(ABC):
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return self.flux.ec_volume(elem.Q_phys, elem.u) * self.c_off + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
+        return self.flux.flux_ec_volume(elem.Q_phys, elem.u) * self.c_off + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
 
 
     @abstractmethod
@@ -74,34 +74,6 @@ class Equation1D(ABC):
     
 
     @abstractmethod
-    def SAT(
-        self,
-        elem,
-        left_ghost_u: float,
-        right_ghost_u: float,
-        left_ghost_du: float,
-        right_ghost_du: float
-    ) -> np.ndarray:
-        """
-        Compute the SAT (boundary‐penalty) contribution for this element’s RHS.
-
-        Parameters:
-          elem            : an Element1D instance
-          left_ghost_u    : value of u just to the left of this element
-          right_ghost_u   : value of u just to the right of this element
-          left_ghost_du   : ∂_x u just to the left of this element
-          right_ghost_du  : ∂_x u just to the right of this element
-
-        Returns:
-          A NumPy array of length (n+1) containing the SAT terms (inviscid + viscous)
-          that must be added to the interior RHS so that boundary/interface coupling
-          is enforced.
-        """
-        pass
-
-
-
-    
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float, av_l:float, av_r:float): 
         """
         Full SAT = SAT_inv + SAT_visc. 
@@ -136,10 +108,10 @@ class Equation1D(ABC):
         du       = elem.du # The gradients are stored element wise - this method assumes that they have been calculated by viscous_aux
         J        = elem.J  # Determinante of the jacobian of the element
         # Forming the rhs
-        sat_inv  = (kr*(f_burger(ur)-f_ssr_meriam(ur,gr,ur,gr,f_burger_ec))*er                # Right Interface Flux -> SAT_inv_r
-                   + (kl)*(f_burger(ul)-f_ssr_meriam(ul,gl,ul,gl,f_burger_ec))*el)             # Left Interface Flux -> SAT_inv_l
-        sat_visc = ((-kr*(1/2)*(nu*du[-1] - nu_r*dgr) + IP_term_burger(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
-                    + (-kl*(1/2)*(nu*du[0] - nu_l*dgl) + IP_term_burger(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
+        sat_inv  = (kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er                # Right Interface Flux -> SAT_inv_r
+                   + (kl)*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el)             # Left Interface Flux -> SAT_inv_l
+        sat_visc = ((-kr*(1/2)*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
+                    + (-kl*(1/2)*(nu*du[0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
         
         return elem.P_inv@ (sat_visc + self.c_off*sat_inv) 
       

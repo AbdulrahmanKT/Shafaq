@@ -1,6 +1,16 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 import SBP as sb
+from . import Shock
+
+
+
+############ For VSCODE to import the autocomplete ###################
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import Shock
+######################################################################
+
 
 
 #######################################
@@ -22,19 +32,15 @@ class Element1D:
                  D_ref: np.ndarray,   # reference D
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray, 
-                 linear: bool = False,
-                 a: float = 1.0,
-                 nu = 1e-3):  # viscocity
+                 equation):  # viscocity
         self.index   = index
         self.left    = left
         self.right   = right
         self.xi      = xi        # shape (n+1,)
         self.n       = xi.size-1
-        self.nu      = nu
-        self.m       = 0 # this parameter turns off the advection, and simply makes the equation diffusive 
-        self.v_off   = 0 # this parameter turns off the diffusion
-        self.linear  = linear # This controls if the solver is using the linear advection equation or not
-        self.advec   = a # Advection Constant
+        self.equation = equation # Stores Equation to be solved
+        
+        
         # physical nodes: x(ξ) = h*ξ + c
         h         = (right - left)/2
         c         = (right + left)/2
@@ -49,10 +55,15 @@ class Element1D:
         self.P_phys  = P_ref * h         # ∫_x = ∫_ξ J dξ
         self.Q_phys  = self.P_phys.dot(self.D_phys) # Notice the use of the physical operators 
         self.P_inv   = (1/self.J)*np.linalg.inv(self.P_ref)
-        self.el      = np.eye(self.n + 1)[0]
-        self.er      = np.eye(self.n + 1)[-1]
+        self.el      = np.eye(self.n + 1)[0] # Using the E operator that is consistant with SBP theory 
+        self.er      = np.eye(self.n + 1)[-1] # Using the E operator that is consistant with SBP theory
+        self.alpha   = 0 # LDG constant
+        # shock capturing 
+        self.av_eps = 0        # This is the initialization of artificial viscocity to be added
+        self.S      = 0        # This is the initialization of the Sensor
         # Initialization for Solution vector and for RHS vector
         self.u          = np.zeros(self.n+1)
+        self.du         = np.zeros(self.n+1)
         self.irhs       = np.zeros_like(self.u)
         self.sat_rhs    = np.zeros_like(self.u)
         self.rhs        = np.zeros_like(self.u)
@@ -106,67 +117,35 @@ class Element1D:
         ax.grid(True)
         return ax
 # -----------------------------------------------------------------------------
-    def SAT_rhs(self, gl, gr, duL_n, duR_n): 
+    def SAT_rhs(self, gl, gr, dgl, dgr, avl, avr): 
         """This method calculates the RHS contribution to this element from the neighboring elements via gl and gr.
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        ul, ur   = self.left_boundary(), self.right_boundary()
-
-
-        if self.linear:
-            taul = -self.advec / 2.0
-            taur =  self.advec / 2.0
-        else:
-            taul = -np.abs((ul + gl))*self.m / 2.0
-            taur =  np.abs((ur + gr))*self.m / 2.0
-
-        sat_inv      =  taul*(ul - gl)*self.el + taur*(ur - gr)*self.er
-        # ---- 2) compute local du/dx at faces ----
-        grad_local = self.D_phys.dot(self.u)
-        duL, duR   = grad_local[0], grad_local[-1]
-
-        # ---- 3) viscous SAT (symmetric interior penalty) ----
-        # jumps in gradient and in value
-        jump_duL =    duL - duL_n
-        jump_duR =   -duR + duR_n   # = duR_n - duR
-        jump_uL  =    ul  - gl
-        jump_uR  =   -ur  + gr     # = gR - uR
         
-        tau_visc = self.nu
-        nu = self.nu
-        sat_visc_L = (0.5*nu*jump_duL + 0.5*tau_visc*jump_uL) * self.el
-        sat_visc_R = (0.5*nu*jump_duR + 0.5*tau_visc*jump_uR) * self.er
-
-        # ---- 4) combine and apply P⁻¹ ----
-        sat_total = sat_inv + self.v_off*(sat_visc_L + sat_visc_R)
-        self.sat_rhs = self.P_inv.dot(sat_total)
-        return self.sat_rhs 
+        return self.equation.SAT(self, gl=gl, gr=gr, dgl=dgl, dgr=dgr, av_l=avl, av_r=avr)  
 # -----------------------------------------------------------------------------    
-    def interior_RHS(self):
-        """This method calculates the RHS contribution from the interior operator.
+    def volume_flux(self):
+        """This method calculates the RHS contribution from the interior operator (all of the volumetric term INV and VISC).
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        if self.linear:
-            inv = -self.advec * self.D_phys @ self.u  # Linear advection
-        else:
-            inv = sb.two_point_flux_function(self.n, self.D_phys, self.u) * self.m  # Nonlinear
 
-        
-        
-        
-        diff   = self.v_off*self.nu * (self.D_phys.dot(self.D_phys.dot(self.u)))
-        irhs  = inv + diff
-        self.irhs = irhs
-        return irhs
+        return self.equation.volume_flux(self)
 # -----------------------------------------------------------------------------
-    def element_rhs(self, gl, gr, duL_n, duR_n): 
-        """This method calculates the total RHS contribution from the IRHS and SAT_RHS. 
+    def viscous_flux(self, gl, gr): 
+        """This method calculates the RHS contribution to this element from the neighboring elements via gl and gr.
         Note: Each call of this method will calculate and store the output in its corresponding vector. 
         """
-        irhs     = self.interior_RHS()
-        sat_rhs  = self.SAT_rhs(gl, gr, duL_n, duR_n)
-        self.rhs = irhs + sat_rhs
-        return self.rhs
+        
+        return self.equation.viscous_aux(self, gl, gr)  
+# -----------------------------------------------------------------------------
+#    def element_rhs(self, gl, gr, duL_n, duR_n): 
+#        """This method calculates the total RHS contribution from the IRHS and SAT_RHS. 
+#        Note: Each call of this method will calculate and store the output in its corresponding vector. 
+#        """
+#        inv     = self.inviscid_flux()
+#        sat_rhs  = self.SAT_rhs(gl, gr, duL_n, duR_n)
+#        self.rhs = irhs + sat_rhs
+#        return self.rhs
 # -----------------------------------------------------------------------------
     def __dir__(self):
         """
@@ -206,9 +185,8 @@ class Mesh1D:
                  D_ref: np.ndarray,
                  P_ref: np.ndarray,
                  Q_ref: np.ndarray,
-                 a: float = 1.0,
-                 linear: bool = False,
-                 nu = 0):
+                 equation, 
+                 shock_capture:bool = False):
         """
         Initialize the mesh and its elements.
 
@@ -230,31 +208,39 @@ class Mesh1D:
             Norm (quadrature) matrix on reference.
         Q_ref : np.ndarray
             Skew-symmetric SBP matrix on reference.
-        linear : bool
-            Controls if the linear advection is used or non-linear (Burger)
-        a :  float
-            Advection constnat. 
-        
-        nu = 1e-3: float
-            viscocity parameter.
+        equation: Equation1D
+            The equation to be solved, providing the necessary methods
+            for computing fluxes and SAT terms.
+        shock_capture : bool
+            This option turns on or off (True or False) the shock
+            capturing scheme.
         """
+        
         # store mesh parameters
         self.x_min, self.x_max = x_min, x_max
         self.nex, self.n       = nex, n
-        self.nu    = nu
         # store reference SBP data
         self.xi    = xi.copy()
         self.w     = w.copy()
         self.D_ref = D_ref.copy()
         self.P_ref = P_ref.copy()
         self.Q_ref = Q_ref.copy()
-        self.el    = np.eye(self.n + 1)
-        self.er    = np.eye(self.n + 1)
+        self.el    = np.eye(self.n + 1)[0]
+        self.er    = np.eye(self.n + 1)[-1]
         self.E0    = 6 # This Quantity is to normalize the total energy
-        self.linear = linear
-        self.advec  = a 
+        self.equation = equation  # Store the equation to be solved
+        
 
+        # Shock Capturing 
+        self.use_shock_capture = shock_capture # This option controls if the shock capturing is initialzed
+        if self.use_shock_capture == True: 
+            self.V = sb.legendre.Vmonde_orthonormal(self.xi, self.w, self.n) # Bulding the Vandermonde Matrix for Converting to modal representation of the solution
+        self.s0 = -1 #np.log(1/self.n**4)
+        self.kappa = 1 
+        self.eps_max = 0.01   
 
+        
+         
         # build physical elements
         self.elements = []
         dx = (self.x_max - self.x_min) / self.nex
@@ -269,9 +255,7 @@ class Mesh1D:
                 D_ref=self.D_ref,
                 P_ref=self.P_ref,
                 Q_ref=self.Q_ref,
-                linear=self.linear,
-                a=self.advec,
-                nu=self.nu
+                equation=equation
             )
             self.elements.append(elem)
 # -----------------------------------------------------------------------------
@@ -369,24 +353,41 @@ class Mesh1D:
         storing each element’s residual in elem.rhs.
         """
         NE = self.nex
-
+        # Gradient Sweap - LDG step
         for e_id, elem in enumerate(self.elements):
             # periodic neighbor indices
             left_id  = (e_id - 1) % NE
             right_id = (e_id + 1) % NE # To properly find the next element
 
             # neighbor boundary values
-            gL = self.elements[left_id].right_boundary()
-            gR = self.elements[right_id].left_boundary()
+            gl = self.elements[left_id].right_boundary()
+            gr = self.elements[right_id].left_boundary()
 
-            # neighbor ∂u/∂x at the faces
-            duL_n = (self.elements[left_id].D_phys @
-                     self.elements[left_id].u)[-1]
-            duR_n = (self.elements[right_id].D_phys @
-                     self.elements[right_id].u)[0]
+            # LDG step to calculate the gradients
+            elem.du = elem.viscous_flux(gl, gr)
+        
 
-            # populate elem.rhs (inviscid+viscous interior + full SAT)
-            elem.element_rhs(gL, gR, duL_n, duR_n)
+        # Full RHS sweap
+        for e_id, elem in enumerate(self.elements):
+            # periodic neighbor indices
+            left_id  = (e_id - 1) % NE
+            right_id = (e_id + 1) % NE # To properly find the next element
+
+            # neighbor boundary values
+            gl = self.elements[left_id].right_boundary()
+            gr = self.elements[right_id].left_boundary()
+            
+            # neighbor ∂u/∂x at the faces from neighboring elements
+            dgl = self.elements[left_id].du[-1] # Gradients at the neighboring elements at the left element at the left boundary
+            dgr = self.elements[right_id].du[0]  # Gradients at the neighboring elements at the left element at the right boundary
+            
+            # Neighboring AV 
+            avl = self.elements[left_id].av_eps # Gradients at the neighboring elements at the left element at the left boundary
+            avr = self.elements[right_id].av_eps  # Gradients at the neighboring elements at the left element at the right boundary
+            
+            # Forming the full rhs
+            elem.rhs = elem.volume_flux() + elem.SAT_rhs( gl, gr, dgl, dgr, avl, avr)
+        
 # ----------------------------------------------------------------------------- 
     def export_global_rhs(self) -> np.ndarray:
         """
@@ -407,73 +408,56 @@ class Mesh1D:
 # -----------------------------------------------------------------------------       
     def step_rk4(self, dt):
         """
-        One RK4 step of size dt, done entirely via element_rhs
-        (now including viscous SAT) and per-element state copies.
+        One classical RK4 step of size dt based on mesh.rhs().
         """
-        NE = self.nex
-        nu = self.nu
-
-        # 1) Save each element's current u  →  U0[e]
+        # --------  snapshot of the solution ------------------------------------
         U0 = [elem.u.copy() for elem in self.elements]
 
-        # helper to compute gL, gR, duL_n, duR_n for element e
-        def face_data(e):
-            left_id, right_id = (e-1)%NE, (e+1)%NE
-            # neighbor u-values
-            gL = self.elements[left_id].right_boundary()
-            gR = self.elements[right_id].left_boundary()
-            # neighbor gradients
-            duL_n = (self.elements[left_id].D_phys @ self.elements[left_id].u)[-1]
-            duR_n = (self.elements[right_id].D_phys @ self.elements[right_id].u)[0]
-            return gL, gR, duL_n, duR_n
-
-        # 2) Stage 1: compute K1 = RHS(u^n)
-        for e, elem in enumerate(self.elements):
-            gL, gR, duL_n, duR_n = face_data(e)
-            elem.element_rhs(gL, gR, duL_n, duR_n)  # uses self.nu internally
+        # -------------------------------------------------------------------- K1
+        self.shock_capture()        # update artificial-viscosity eps_i
+        self.rhs()                  # fills elem.rhs for all elements
+        for elem in self.elements:
             elem.K1 = elem.rhs.copy()
 
-        # 3) Stage 2: u = U0 + (dt/2)*K1; compute K2
+        # -------------------------------------------------------------------- K2
         for e, elem in enumerate(self.elements):
             elem.u = U0[e] + 0.5*dt*elem.K1
-        for e, elem in enumerate(self.elements):
-            gL, gR, duL_n, duR_n = face_data(e)
-            elem.element_rhs(gL, gR, duL_n, duR_n)
+        self.shock_capture()
+        self.rhs()
+        for elem in self.elements:
             elem.K2 = elem.rhs.copy()
 
-        # 4) Stage 3: u = U0 + (dt/2)*K2; compute K3
+        # -------------------------------------------------------------------- K3
         for e, elem in enumerate(self.elements):
             elem.u = U0[e] + 0.5*dt*elem.K2
-        for e, elem in enumerate(self.elements):
-            gL, gR, duL_n, duR_n = face_data(e)
-            elem.element_rhs(gL, gR, duL_n, duR_n)
+        self.shock_capture()
+        self.rhs()
+        for elem in self.elements:
             elem.K3 = elem.rhs.copy()
 
-        # 5) Stage 4: u = U0 + dt*K3; compute K4
+        # -------------------------------------------------------------------- K4
         for e, elem in enumerate(self.elements):
-            elem.u = U0[e] +     dt*elem.K3
-        for e, elem in enumerate(self.elements):
-            gL, gR, duL_n, duR_n = face_data(e)
-            elem.element_rhs(gL, gR, duL_n, duR_n)
+            elem.u = U0[e] + dt*elem.K3
+        self.shock_capture()
+        self.rhs()
+        for elem in self.elements:
             elem.K4 = elem.rhs.copy()
 
-        # 6) Final update: u = U0 + (dt/6)(K1+2K2+2K3+K4)
+        # ---------------------- final RK4 combine ------------------------------
         for e, elem in enumerate(self.elements):
             elem.u = (
-                U0[e]
-                + (dt/6.0)
-                * (elem.K1 + 2*elem.K2 + 2*elem.K3 + elem.K4)
+                U0[e] + (dt/6.0)*(elem.K1 + 2*elem.K2 + 2*elem.K3 + elem.K4)
             )
 # -----------------------------------------------------------------------------       
     def total_energy_normalized(self) -> float:
         """
-        Compute  E = 1/2 * sum_e (u_e^T P_phys u_e).
+        Compute  dS/dt.
         """
         E = 0.0
         for elem in self.elements:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
-            E += elem.u @ (elem.P_phys @ elem.rhs)
-        return 0.5 * E / self.E0      
+            E += elem.u.T @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
+        return E / self.E0
 # ----------------------------------------------------------------------------- 
     def total_energy(self) -> float:
         """
@@ -484,11 +468,34 @@ class Mesh1D:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
             E += elem.u @ (elem.P_phys @ elem.u)
         return 0.5 * E       
+# ----------------------------------------------------------------------------- 
+    def shock_capture(self): 
+        """Computes the Persson Sensor and the Artificial Viscocity. 
+        Stores the AV in elem.av_eps."""
+        if not self.use_shock_capture:
+            return                           # This option exits early when this option is not true
+        
+        V = self.V 
+        w = self.w
+        s0 = self.s0
+        kappa = self.kappa
+        eps_max = self.eps_max
 
-
-
-
-
+        for elem in self.elements: 
+            a = Shock.nodal_to_modal(u=elem.u,w=w,V=V)
+            elem.S = Shock.perrson_sensor(a=a)
+            elem.av_eps = Shock.av(elem.S, s0=s0, kappa=kappa, e0=eps_max)
+# -----------------------------------------------------------------------------
+    def print_av(self) -> float:
+       """Prints a field of AV values accross all elements.
+       """
+       return np.vstack([elem.av_eps for elem in self.elements])
+# -----------------------------------------------------------------------------
+    def print_S(self) -> float:
+       """Prints a field of AV values accross all elements.
+       """
+       return np.vstack([elem.S for elem in self.elements])
+           
 #######################################
 ############ Meshing
 #######################################

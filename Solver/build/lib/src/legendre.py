@@ -361,7 +361,28 @@ def two_point_flux_function(n ,D, u):
     
     return -2*(D * F).sum(axis=1)
 
+def Vmonde_orthonormal(xi ,w , n): 
+    """
+    Construct the orthonormal Legendre Vandermonde matrix:
+    V[j, i] = sqrt((2i+1)/2) * P_i(x[j]), for i = 0,...,N and j = 0,...,len(x)-1
 
+    Parameters
+    ----------
+    xi : np.ndarray
+        1D array of nodes in [-1, 1]
+    n : int
+        Maximum polynomial degree
 
-
+    Returns
+    -------
+    V : np.ndarray
+        Orthonormal Vandermonde matrix of shape (len(x), N+1)
+    """
+    V_raw = np.polynomial.legendre.legvander(xi, n)                         # shape (len(x), N+1)
+    V_ortho = np.zeros_like(V_raw)
+    for i in range(n+1):                               # This is to normalize under-quadrature integration 
+        norm = np.sqrt(np.sum(w * V_raw[:, i]**2))
+        V_ortho[:, i] = V_raw[:, i] / norm
+        
+    return V_ortho
 
