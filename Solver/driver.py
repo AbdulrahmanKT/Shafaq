@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 import numpy as np
 import matplotlib.pyplot as plt
-from SBP.legendre import * 
-from SBP.mesh_1d import * 
-from SBP.Equations import *
-import SBP.Shock # For using the shock capturing
+from Shafaq.legendre import * 
+from Shafaq.mesh_1d import * 
+from Shafaq.Equations import *
+import Shafaq.Shock # For using the shock capturing
 
 
 # --- 1) Problem parameters ---
-Lx      = 5           # domain length
-nex     = 100           # number of elements
-poly_p  = 3              # polynomial degree (n)
-t_final = 100          # final time
+Lx      = 1           # domain length
+nex     = 2           # number of elements
+poly_p  = 5              # polynomial degree (n)
+
+t_final = 1000          # final time
 dt      = 1e-4
-plot_every = 10
+plot_every = 1
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -31,7 +32,8 @@ a    = 1
 nu   = 0.00001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 c_off = 0      # turn convection SAT on/off (1→on, 0→off)
-eq   = Advection(a=a, nu=nu, v_off=v_off)
+eq   = Equation1D(flux=AdvectiveFlux(a=2), nu=nu, c_off=0)
+#eq   = Equation1D(flux=AdvectiveFlux(a=0.5), nu=0, c_off=1)
 #eq   = Burger(c_off=c_off, nu=nu, v_off=v_off)
 
 
@@ -75,8 +77,10 @@ def constant(x):
 def gaussian(x, mu=0.5, sigma=0.1):
     return 0.8*np.exp(-((x - mu)**2) / (2 * sigma**2))
 
+def sin_short(x):
+    return np.sin(x*np.pi)
 
-mesh.set_initial_condition(lambda x: np.sin(2*np.pi*x))
+mesh.set_initial_condition(sin_short)
 mesh.rhs()
 fig, ax = plt.subplots(figsize=(20,5))
 mesh.plot()
@@ -100,8 +104,8 @@ dx_elem = Lx / nex
 t = 0.0
 it = 0
 #snapshots = [mesh]  # store initial snapshot if needed
-fig, ax = plt.subplots(figsize=(20,5))
-mesh.plot(ax=ax)
+#fig, ax = plt.subplots(figsize=(20,5))
+#mesh.plot(ax=ax)
 times = []
 energies = []
 
@@ -112,24 +116,24 @@ while t < t_final:
     mesh.step_rk4(dt)
     t += dt
     it += 1
-    ax.clear()
-    ax.grid(True)
-    ax.set_xlabel("x")
-    ax.set_ylabel("u")
-    ax.set_ylim(-2, 2)
+    #ax.clear()
+    #ax.grid(True)
+    #ax.set_xlabel("x")
+    #ax.set_ylabel("u")
+    #ax.set_ylim(0, 1)
     
-    if it % plot_every == 0:
-        for i, elem in enumerate(mesh.elements):
-            ax.plot(elem.x, elem.u, label="Solution")
+    #if it % plot_every == 0:
+        #for i, elem in enumerate(mesh.elements):
+            #ax.plot(elem.x, elem.u, label="Solution")
             #ax.plot(elem.x, 100*elem.av_eps*np.ones_like(elem.x),"--", label="AV")
             #ax.plot(elem.x, -elem.S*np.ones_like(elem.x), label="Sensor")
             #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
             #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
             #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
-            ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
+            #ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
 
-        plt.pause(1/10000)
-        plt.tight_layout()
+        #plt.pause(1/10000)
+        #plt.tight_layout()
 
         #plt.savefig("Final_Step.png")
     #ax.plot( mesh.total_energy(), label="Total Energy")
@@ -156,5 +160,5 @@ plt.title("Energy of the System vs Time")
 plt.xlabel("Time")
 plt.ylabel("Total Energy of the System")
 plt.grid(True)
-plt.show()
+plt.savefig()
 

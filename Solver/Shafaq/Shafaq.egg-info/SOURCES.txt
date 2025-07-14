@@ -1,7 +1,0 @@
-README
-setup.py
-Shafaq.egg-info/PKG-INFO
-Shafaq.egg-info/SOURCES.txt
-Shafaq.egg-info/dependency_links.txt
-Shafaq.egg-info/requires.txt
-Shafaq.egg-info/top_level.txt

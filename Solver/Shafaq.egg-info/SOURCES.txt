@@ -1,0 +1,15 @@
+README.md
+setup.py
+Shafaq/Equations copy.py
+Shafaq/Equations.py
+Shafaq/Shock.py
+Shafaq/__init__.py
+Shafaq/fluxes.py
+Shafaq/legendre.py
+Shafaq/mesh_1d.py
+Shafaq/mesh_2d.py
+Shafaq.egg-info/PKG-INFO
+Shafaq.egg-info/SOURCES.txt
+Shafaq.egg-info/dependency_links.txt
+Shafaq.egg-info/requires.txt
+Shafaq.egg-info/top_level.txt

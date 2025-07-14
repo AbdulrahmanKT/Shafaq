@@ -8,11 +8,10 @@ Defining fluxes here, will allow for the Equations class to "grab" a flux type a
 """
 
 # Imports       -----------------------------------------------------
-from __future__ import annotations  # for Python <3.11
 from abc import ABC, abstractmethod
 import numpy as np
 from numpy.typing import NDArray
-
+from __future__ import annotations  # for Python <3.11
 
 class Flux(ABC):
     """Interface all concrete fluxes must satisfy."""
@@ -121,7 +120,7 @@ class AdvectiveFlux(Flux):
     def __init__(self, a: float): self.a = float(a)
 
 
-    def flux(self, u: NDArray[np.float64]) -> NDArray[np.float64]:
+    def flux(self, a: float, u: NDArray[np.float64]) -> NDArray[np.float64]:
         """
         Element-wise **linear advection** flux *f(u) = a u*.
 
@@ -137,12 +136,12 @@ class AdvectiveFlux(Flux):
         ndarray
             `a * u`, with the same shape as *u*.
         """
-        return self.a * u
+        return a * u
     
     
     
     
-    def flux_ec(self,
+    def flux_ec(self, a: float,
                  u_L: NDArray[np.float64],
                  u_R: NDArray[np.float64]) -> NDArray[np.float64]:
         """
@@ -163,12 +162,12 @@ class AdvectiveFlux(Flux):
         ndarray
             Central flux of the same broadcasted shape as `np.broadcast(u_L, u_R)`.
         """
-        return 0.5 * self.a * (u_L + u_R)
+        return 0.5 * a * (u_L[:,None] + u_R[None,:])
 
 
-    def flux_ec_vol(self, Q : NDArray , u: NDArray[np.float64]): 
-        
-        f_ec = 0.5 * self.a * (u[:,None] + u[None,:])
+    def flux_ec_vol(self, a: float , Q : NDArray , u: NDArray[np.float64]): 
+
+        f_ec = self.flux_ec(a, u , u)
         return -2.0 * (Q * f_ec).sum(axis=1)
 
 

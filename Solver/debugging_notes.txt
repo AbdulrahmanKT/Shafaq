@@ -1,0 +1,8 @@
+Last thing I checked were the SBP operators, and they have reproduced the SBP properties and compared with the sample n = 2 D matrix, which means that 
+It is not a problem with the operators. Now, since the Advection equation is only using 
+
+- convection (-2QF_ec)
+- SAT_inv 
+- Small dt yield small postive entropy rate that is growing. 
+
+I suspect it is the SAT term (could be a sign issue)

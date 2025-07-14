@@ -19,27 +19,27 @@ class Equation1D(ABC):
     """
     def __init__(self,
                  flux:Flux,
-                 nu : float = 0.0,
-                 c_off: float = 1.0):
+                 nu : float,
+                 c_off: float):
         
         self.flux = flux # Inherits flux type (e.g. Burgers, Advecion, Euler)
-        self.nu = nu         # Viscocity of the equation - Later to be defined by another class called viscous fluxes for (NS and Euler)
-        self.c_off  = c_off     # Coefficient for turning off convection - Debugging
+        self.nu          # Viscocity of the equation - Later to be defined by another class called viscous fluxes for (NS and Euler)
+        self.c_off       # Coefficient for turning off convection - Debugging
 
 
 
 
-    
+    @abstractmethod
     def volume_flux(self, elem: Element1D): 
         """
         Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return self.flux.flux_ec_vol(elem.Q_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
+        return self.flux.flux_ec_volume(elem.Q_phys, elem.u) * self.c_off + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
 
 
-    
+    @abstractmethod
     def viscous_aux(self, elem: Element1D, gl:float, gr:float): 
         """
         LDG gradient reconstruction with penalty terms.
@@ -73,7 +73,7 @@ class Equation1D(ABC):
         return theta
     
 
-    
+    @abstractmethod
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float, av_l:float, av_r:float): 
         """
         Full SAT = SAT_inv + SAT_visc. 
@@ -113,7 +113,7 @@ class Equation1D(ABC):
         sat_visc = ((-kr*(1/2)*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
                     + (-kl*(1/2)*(nu*du[0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
         
-        return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
+        return elem.P_inv@ (sat_visc + self.c_off*sat_inv) 
       
       
       
