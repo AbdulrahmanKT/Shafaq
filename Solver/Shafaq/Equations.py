@@ -36,7 +36,7 @@ class Equation1D(ABC):
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return self.flux.flux_ec_vol(elem.Q_phys, elem.u)  + elem.D_phys@((self.nu + elem.av_eps)*elem.du)*self.c_off
+        return self.flux.flux_ec_vol(elem.Q_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
 
 
     
@@ -69,7 +69,7 @@ class Equation1D(ABC):
 
         # Forming the gradient theta 
         dw = elem.D_phys@u
-        theta = elem.P_inv@(dw +(-kr/2)*(1-kr*alpha)*(grad_rot*u[-1] - grad_rot*gr)*er + (-kl/2)*(1-kl*alpha)*(grad_rot*u[0] - grad_rot*gl)*el) 
+        theta = elem.P_inv@(dw +(-kr/2)*(u[-1] - gr)*er + (-kl/2)*(u[0] - gl)*el) 
         return theta
     
 
@@ -108,14 +108,13 @@ class Equation1D(ABC):
         du       = elem.du # The gradients are stored element wise - this method assumes that they have been calculated by viscous_aux
         J        = elem.J  # Determinante of the jacobian of the element
         # Forming the rhs
-        sat_inv  = (kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er                # Right Interface Flux -> SAT_inv_r
-                   + (kl)*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el)             # Left Interface Flux -> SAT_inv_l
+        sat_inv  =    (kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er                # Right Interface Flux -> SAT_inv_r
+                    +  kl*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el)             # Left Interface Flux -> SAT_inv_l
         sat_visc = ((-kr*(1/2)*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
                     + (-kl*(1/2)*(nu*du[0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
         
-        return elem.P_inv@ (sat_visc*self.c_off + sat_inv*self.c_off) 
-      
-      
+        return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
+        
       
       
       

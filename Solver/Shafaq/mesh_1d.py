@@ -40,6 +40,8 @@ class Element1D:
         self.n       = xi.size-1
         self.equation = equation # Stores Equation to be solved
         
+
+        
         
         # physical nodes: x(ξ) = h*ξ + c
         h         = (right - left)/2
@@ -67,6 +69,14 @@ class Element1D:
         self.irhs       = np.zeros_like(self.u)
         self.sat_rhs    = np.zeros_like(self.u)
         self.rhs        = np.zeros_like(self.u)
+        # Debug Variables
+        self.debug_visc = np.zeros_like(self.u)
+        self.debug_sat_visc = np.zeros_like(self.u)
+        self.debug_inv = np.zeros_like(self.u)
+        self.debug_sat_inv = np.zeros_like(self.u)
+
+
+
         # Runge-Kutta 4 Stage Solution Vectors
         self.K1 = np.zeros_like(self.u)
         self.K2 = np.zeros_like(self.u)
@@ -365,6 +375,7 @@ class Mesh1D:
 
             # LDG step to calculate the gradients
             elem.du = elem.viscous_flux(gl, gr)
+            
         
 
         # Full RHS sweap
@@ -386,8 +397,9 @@ class Mesh1D:
             avr = self.elements[right_id].av_eps  # Gradients at the neighboring elements at the left element at the right boundary
             
             # Forming the full rhs
-            elem.rhs = elem.volume_flux() + elem.SAT_rhs( gl, gr, dgl, dgr, avl, avr)
-        
+            sat_visc = elem.SAT_rhs( gl, gr, dgl, dgr, avl, avr)
+            elem.rhs = elem.volume_flux() + sat_visc
+            elem.debug_sat_vsic = sat_visc
 # ----------------------------------------------------------------------------- 
     def export_global_rhs(self) -> np.ndarray:
         """
@@ -458,7 +470,7 @@ class Mesh1D:
             # u^T P_phys u  = sum_i (P_phys_ii * u_i^2)
             E += elem.u.T @ (elem.P_phys @ elem.rhs) # This formulation allows for the user to observe the dE/dt
         return E / self.E0
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
     def total_energy(self) -> float:
         """
         Compute  E = 1/2 * sum_e (u_e^T P_phys u_e).

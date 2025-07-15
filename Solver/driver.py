@@ -9,11 +9,11 @@ import Shafaq.Shock # For using the shock capturing
 
 # --- 1) Problem parameters ---
 Lx      = 1           # domain length
-nex     = 2           # number of elements
-poly_p  = 5              # polynomial degree (n)
+nex     = 100           # number of elements
+poly_p  = 2              # polynomial degree (n)
 
 t_final = 1000          # final time
-dt      = 1e-4
+dt      = 1e-5
 plot_every = 1
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
@@ -29,7 +29,7 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 1
-nu   = 0.00001     # viscosity
+nu   = 0.000001     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 c_off = 0      # turn convection SAT on/off (1→on, 0→off)
 eq   = Equation1D(flux=AdvectiveFlux(a=2), nu=nu, c_off=0)
