@@ -10,7 +10,7 @@ import Shafaq.Shock # For using the shock capturing
 # --- 1) Problem parameters ---
 Lx      = 1           # domain length
 nex     = 100           # number of elements
-poly_p  = 2              # polynomial degree (n)
+poly_p  = 4              # polynomial degree (n)
 
 t_final = 1000          # final time
 dt      = 1e-5

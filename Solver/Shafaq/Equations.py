@@ -36,7 +36,7 @@ class Equation1D(ABC):
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return self.flux.flux_ec_vol(elem.Q_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du)
+        return self.flux.flux_ec_vol(elem.Q_phys, elem.u)  + elem.D_phys@((self.nu + elem.av_eps)*elem.du)*self.c_off
 
 
     
@@ -60,7 +60,8 @@ class Equation1D(ABC):
         """
         # Defining the relevant variables 
         kl       = -1    # Normal to the left face of element k 
-        kr       =  1    # Normal to the right face of element k
+        kr       =  1    # Normal to the right face of element k 
+
         el       = elem.el 
         er       = elem.er
         alpha    = 0
@@ -69,7 +70,7 @@ class Equation1D(ABC):
 
         # Forming the gradient theta 
         dw = elem.D_phys@u
-        theta = elem.P_inv@(dw +(-kr/2)*(u[-1] - gr)*er + (-kl/2)*(u[0] - gl)*el) 
+        theta = elem.P_inv@(dw +(kr)*(u[-1] - gr)*er + (kl)*(u[0] - gl)*el) 
         return theta
     
 
@@ -98,9 +99,9 @@ class Equation1D(ABC):
           """
         # Definition of Variables
         ul, ur   = elem.left_boundary(), elem.right_boundary() # Extracting the element boundaries
-        nu       =    self.nu + elem.av_eps
-        nu_l     =    self.nu + av_l 
-        nu_r     =    self.nu + av_r       
+        nu       =    float(self.nu + elem.av_eps)
+        nu_l     =    float(self.nu + av_l) 
+        nu_r     =    float(self.nu + av_r)       
         kl       = -1    # Normal to the left face of element k 
         kr       =  1    # Normal to the right face of element k
         el       = elem.el 
@@ -110,11 +111,10 @@ class Equation1D(ABC):
         # Forming the rhs
         sat_inv  =    (kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er                # Right Interface Flux -> SAT_inv_r
                     +  kl*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el)             # Left Interface Flux -> SAT_inv_l
-        sat_visc = ((-kr*(1/2)*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
-                    + (-kl*(1/2)*(nu*du[0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
+        sat_visc = ((-kr*nu*(1)*(du[-1] - dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
+                    + (-kl*nu*(1)*(du[0] - dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
         
-        return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
-        
+        return elem.P_inv@ (sat_visc*self.c_off + sat_inv) 
       
       
       

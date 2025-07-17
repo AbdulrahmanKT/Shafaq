@@ -53,10 +53,10 @@ class Element1D:
         self.P_ref    = P_ref
         self.Q_ref    = Q_ref
         # physical‐space SBP operators:
-        self.D_phys  = D_ref / h         # ∂/∂x = (1/J) ∂/∂ξ
-        self.P_phys  = P_ref * h         # ∫_x = ∫_ξ J dξ
+        self.D_phys  = D_ref * (2/ self.J)         # ∂/∂x = (1/J) ∂/∂ξ
+        self.P_phys  = P_ref / (2/ self.J)         # ∫_x = ∫_ξ J dξ
         self.Q_phys  = self.P_phys.dot(self.D_phys) # Notice the use of the physical operators 
-        self.P_inv   = (1/self.J)*np.linalg.inv(self.P_ref)
+        self.P_inv   = np.linalg.inv(self.P_phys)
         self.el      = np.eye(self.n + 1)[0] # Using the E operator that is consistant with SBP theory 
         self.er      = np.eye(self.n + 1)[-1] # Using the E operator that is consistant with SBP theory
         self.alpha   = 0 # LDG constant
@@ -70,10 +70,7 @@ class Element1D:
         self.sat_rhs    = np.zeros_like(self.u)
         self.rhs        = np.zeros_like(self.u)
         # Debug Variables
-        self.debug_visc = np.zeros_like(self.u)
-        self.debug_sat_visc = np.zeros_like(self.u)
-        self.debug_inv = np.zeros_like(self.u)
-        self.debug_sat_inv = np.zeros_like(self.u)
+
 
 
 
@@ -399,7 +396,8 @@ class Mesh1D:
             # Forming the full rhs
             sat_visc = elem.SAT_rhs( gl, gr, dgl, dgr, avl, avr)
             elem.rhs = elem.volume_flux() + sat_visc
-            elem.debug_sat_vsic = sat_visc
+            elem.debug_sat_visc = sat_visc
+        
 # ----------------------------------------------------------------------------- 
     def export_global_rhs(self) -> np.ndarray:
         """

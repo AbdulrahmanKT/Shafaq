@@ -172,7 +172,7 @@ class AdvectiveFlux(Flux):
         return -2.0 * (Q * f_ec).sum(axis=1)
 
 
-    def ip_term(self, nu_i:float, nu_gi:float , det_J:float, B:float = 10): 
+    def ip_term(self, nu_i:float, nu_gi:float , det_J:float, B:float = 100): 
         """ This function calculates the lamda_V or the L term (from Fisher and Carpenter or Parsani Discontinous Interfaces respectivly)). 
 
         Parameters
@@ -190,7 +190,7 @@ class AdvectiveFlux(Flux):
         L : float
             The IP term. 
         """
-        return -B*(nu_i + nu_gi)/det_J
+        return -B*(nu_i + nu_gi)
 
 
 
@@ -209,5 +209,5 @@ def f_ssr_meriam(u_int:float | NDArray[np.float64],
     Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
     Using the merriam convention. 
     """
-    f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(u_int)*(w_uint - w_gint) # This is the Entroy stable interface flux using Merriam speed for the upwinding
+    f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(2)*(w_uint - w_gint) # This is the Entroy stable interface flux using Merriam speed for the upwinding
     return f_ssr
