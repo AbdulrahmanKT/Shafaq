@@ -30,13 +30,6 @@ class Equation1D(ABC):
 
 
     
-    def volume_flux(self, elem: Element1D): 
-        """
-        Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
-        F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
-        """
-        
-        return self.flux.flux_ec_vol(elem.Q_phys, elem.u)  + elem.D_phys@((self.nu + elem.av_eps)*elem.du)*self.c_off
 
 
     
@@ -70,10 +63,17 @@ class Equation1D(ABC):
 
         # Forming the gradient theta 
         dw = elem.D_phys@u
-        theta = elem.P_inv@(dw +(kr)*(u[-1] - gr)*er + (kl)*(u[0] - gl)*el) 
+        theta = elem.P_inv@(dw +(kr)*(u[-1] - gr)*er + (-kl)*(u[0] - gl)*el) 
         return theta
     
 
+    def volume_flux(self, elem: Element1D): 
+        """
+        Computes the interior convective inviscid flux (-2 * Hadmard(D, F_num)). 
+        F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
+        """
+        
+        return (self.flux.flux_ec_vol(elem.Q_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du))
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float, av_l:float, av_r:float): 
         """
@@ -98,7 +98,8 @@ class Equation1D(ABC):
           5 - Form IP term for every interface.      
           """
         # Definition of Variables
-        ul, ur   = elem.left_boundary(), elem.right_boundary() # Extracting the element boundaries
+        ul = elem.left_boundary()
+        ur = elem.right_boundary()
         nu       =    float(self.nu + elem.av_eps)
         nu_l     =    float(self.nu + av_l) 
         nu_r     =    float(self.nu + av_r)       
@@ -108,13 +109,22 @@ class Equation1D(ABC):
         er       = elem.er
         du       = elem.du # The gradients are stored element wise - this method assumes that they have been calculated by viscous_aux
         J        = elem.J  # Determinante of the jacobian of the element
-        # Forming the rhs
-        sat_inv  =    (kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er                # Right Interface Flux -> SAT_inv_r
-                    +  kl*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el)             # Left Interface Flux -> SAT_inv_l
-        sat_visc = ((-kr*nu*(1)*(du[-1] - dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
-                    + (-kl*nu*(1)*(du[0] - dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
         
-        return elem.P_inv@ (sat_visc*self.c_off + sat_inv) 
+        # Forming the inviscid SAT
+        sat_inv_r  =  -kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er # Right Interface Flux -> SAT_inv_r
+        sat_inv_l  =   kl*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el             # Left Interface Flux -> SAT_inv_l
+        sat_inv = sat_inv_r + sat_inv_l
+        
+
+        # Forming the viscous SAT
+        sat_visc_r = (kr*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
+        sat_visc_l = (-kl*(nu*du[ 0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el
+        sat_visc = sat_visc_r + sat_visc_l
+    
+        #print("IP = ", self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr)*er + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl)*el)
+        print("Diffusive SAT = ", kr*(nu*du[-1] - nu_r*dgr)*er + kl*(nu*du[ 0] - nu_l*dgl)*el)
+        return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
+
       
       
       

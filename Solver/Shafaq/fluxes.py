@@ -172,7 +172,7 @@ class AdvectiveFlux(Flux):
         return -2.0 * (Q * f_ec).sum(axis=1)
 
 
-    def ip_term(self, nu_i:float, nu_gi:float , det_J:float, B:float = 100): 
+    def ip_term(self, nu_i:float, nu_gi:float , det_J:float, B:float = 1): 
         """ This function calculates the lamda_V or the L term (from Fisher and Carpenter or Parsani Discontinous Interfaces respectivly)). 
 
         Parameters

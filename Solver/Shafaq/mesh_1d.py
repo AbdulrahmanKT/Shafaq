@@ -53,8 +53,8 @@ class Element1D:
         self.P_ref    = P_ref
         self.Q_ref    = Q_ref
         # physical‐space SBP operators:
-        self.D_phys  = D_ref * (2/ self.J)         # ∂/∂x = (1/J) ∂/∂ξ
-        self.P_phys  = P_ref / (2/ self.J)         # ∫_x = ∫_ξ J dξ
+        self.D_phys  = D_ref / ( self.J)         # ∂/∂x = (1/J) ∂/∂ξ
+        self.P_phys  = P_ref * ( self.J)         # ∫_x = ∫_ξ J dξ
         self.Q_phys  = self.P_phys.dot(self.D_phys) # Notice the use of the physical operators 
         self.P_inv   = np.linalg.inv(self.P_phys)
         self.el      = np.eye(self.n + 1)[0] # Using the E operator that is consistant with SBP theory 
@@ -458,6 +458,7 @@ class Mesh1D:
             elem.u = (
                 U0[e] + (dt/6.0)*(elem.K1 + 2*elem.K2 + 2*elem.K3 + elem.K4)
             )
+        self.rhs()
 # -----------------------------------------------------------------------------       
     def total_energy_normalized(self) -> float:
         """
