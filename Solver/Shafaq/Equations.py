@@ -73,7 +73,7 @@ class Equation1D(ABC):
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return (self.flux.flux_ec_vol(elem.D_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du))
+        return (self.flux.flux_ec_vol(elem.Q_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du))
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float, av_l:float, av_r:float): 
         """
