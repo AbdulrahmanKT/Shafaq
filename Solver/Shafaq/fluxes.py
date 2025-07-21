@@ -24,7 +24,13 @@ class Flux(ABC):
     def flux_ec_vol(self, Q: NDArray, u :NDArray): ...
     @abstractmethod
     def ip_term(self, Q: NDArray, u :NDArray): ...
-
+    @abstractmethod
+    def f_ssr_meriam(self, u_int:float | NDArray[np.float64],
+             g_int:float | NDArray[np.float64], 
+             w_uint:float | NDArray[np.float64], 
+             w_gint:float | NDArray[np.float64],
+             f_ec:callable[...,float]): ...
+    
 # ---------- Burgers --------------------------------------------
 class BurgerFlux(Flux):
     
@@ -91,7 +97,7 @@ class BurgerFlux(Flux):
         ndarray
             Length-`n+1` RHS contribution ``-2 * Q @ F @ 1`` (vector form).
         """
-        F_ec = self.flux_ec(u,u)
+        F_ec = self.flux_ec(u[:, None], u[None, :]) #self.flux_ec(u,u)
         return -2.0 * (Q * F_ec).sum(axis=1)
     
 
@@ -114,6 +120,18 @@ class BurgerFlux(Flux):
             The IP term. 
         """
         return -B*(nu_i + nu_gi)/det_J
+    
+    def f_ssr_meriam(self, u_int:float | NDArray[np.float64],
+             g_int:float | NDArray[np.float64], 
+             w_uint:float | NDArray[np.float64], 
+             w_gint:float | NDArray[np.float64],
+             f_ec:callable[...,float]):
+        """
+        Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
+        Using the merriam convention. 
+        """
+        f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(u_int)*(w_uint - w_gint) 
+        return f_ssr
 
 # ---------- Linear advection -----------------------------------
 class AdvectiveFlux(Flux):
@@ -193,21 +211,21 @@ class AdvectiveFlux(Flux):
         return -B*(nu_i + nu_gi)
 
 
-
+    def f_ssr_meriam(self, u_int:float | NDArray[np.float64],
+                 g_int:float | NDArray[np.float64], 
+                 w_uint:float | NDArray[np.float64], 
+                 w_gint:float | NDArray[np.float64],
+                 f_ec:callable[...,float]):
+        """
+        Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
+        Using the merriam convention. 
+        """
+        f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(self.a)*(w_uint - w_gint) 
+        return f_ssr
 
 
 
 # ----------------------------------------------------------------------
 # f_ssr_meriam 
 # ----------------------------------------------------------------------
-def f_ssr_meriam(u_int:float | NDArray[np.float64],
-                 g_int:float | NDArray[np.float64], 
-                 w_uint:float | NDArray[np.float64], 
-                 w_gint:float | NDArray[np.float64],
-                 f_ec:callable[...,float]):
-    """
-    Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
-    Using the merriam convention. 
-    """
-    f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(2)*(w_uint - w_gint) # This is the Entroy stable interface flux using Merriam speed for the upwinding
-    return f_ssr
+

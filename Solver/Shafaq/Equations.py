@@ -63,7 +63,7 @@ class Equation1D(ABC):
 
         # Forming the gradient theta 
         dw = elem.D_phys@u
-        theta = elem.P_inv@(dw +(kr)*(u[-1] - gr)*er + (-kl)*(u[0] - gl)*el) 
+        theta = dw + elem.P_inv@( +(-kr)*(u[-1] - gr)*er + (-kl)*(u[0] - gl)*el) # The jump sign convention is " -(normal)(Inner - Outer) " 
         return theta
     
 
@@ -73,7 +73,7 @@ class Equation1D(ABC):
         F_num comes from the 2-point entropy flux function, which is defined in the legendre.py module.
         """
         
-        return (self.flux.flux_ec_vol(elem.Q_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du))
+        return (self.flux.flux_ec_vol(elem.D_phys, elem.u)*self.c_off  + elem.D_phys@((self.nu + elem.av_eps)*elem.du))
     
     def SAT(self, elem: Element1D, gl: float, gr: float, dgl: float, dgr: float, av_l:float, av_r:float): 
         """
@@ -111,18 +111,19 @@ class Equation1D(ABC):
         J        = elem.J  # Determinante of the jacobian of the element
         
         # Forming the inviscid SAT
-        sat_inv_r  =  -kr*(self.flux.flux(ur)-f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er # Right Interface Flux -> SAT_inv_r
-        sat_inv_l  =   kl*(self.flux.flux(ul)-f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el             # Left Interface Flux -> SAT_inv_l
+        sat_inv_r  =    kr*(self.flux.flux(ur)-self.flux.f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er # Right Interface Flux -> SAT_inv_r
+        sat_inv_l  =    kl*(self.flux.flux(ul)-self.flux.f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el             # Left Interface Flux -> SAT_inv_l
         sat_inv = sat_inv_r + sat_inv_l
         
 
         # Forming the viscous SAT
-        sat_visc_r = (kr*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er 
-        sat_visc_l = (-kl*(nu*du[ 0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el
+        sat_visc_r = (-kr*(nu*du[-1] - nu_r*dgr) - self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er # The gradient jump should be opposite of normal, and the IP term should penalize opposite of that
+        sat_visc_l = (-kl*(nu*du[ 0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el # The gradient jump should be opposite of normal, and the IP term should penalize opposite of that
         sat_visc = sat_visc_r + sat_visc_l
     
         #print("IP = ", self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr)*er + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl)*el)
-        print("Diffusive SAT = ", kr*(nu*du[-1] - nu_r*dgr)*er + kl*(nu*du[ 0] - nu_l*dgl)*el)
+        #print("Diffusive SAT = ", kr*(nu*du[-1] - nu_r*dgr)*er + kl*(nu*du[ 0] - nu_l*dgl)*el)
+        #print("Diffusive SAT face = ", sat_visc_r*er + sat_visc_l*el ) #*kl*(nu_l*dgl - nu*du[ 0] )
         return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
 
       
