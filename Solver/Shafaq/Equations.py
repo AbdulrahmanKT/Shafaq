@@ -111,8 +111,8 @@ class Equation1D(ABC):
         J        = elem.J  # Determinante of the jacobian of the element
         
         # Forming the inviscid SAT
-        sat_inv_r  =    kr*(self.flux.flux(ur)-self.flux.f_ssr_meriam(ur,gr,ur,gr,self.flux.flux_ec))*er # Right Interface Flux -> SAT_inv_r
-        sat_inv_l  =    kl*(self.flux.flux(ul)-self.flux.f_ssr_meriam(ul,gl,ul,gl,self.flux.flux_ec))*el             # Left Interface Flux -> SAT_inv_l
+        sat_inv_r  =    kr*(self.flux.flux(ur)-self.flux.f_ssr_meriam(ur,gr,ur,gr))*er # Right Interface Flux -> SAT_inv_r
+        sat_inv_l  =    kl*(self.flux.flux(ul)-self.flux.f_ssr_meriam(ul,gl,ul,gl))*el             # Left Interface Flux -> SAT_inv_l
         sat_inv = sat_inv_r + sat_inv_l
         
 
@@ -124,6 +124,7 @@ class Equation1D(ABC):
         #print("IP = ", self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr)*er + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl)*el)
         #print("Diffusive SAT = ", kr*(nu*du[-1] - nu_r*dgr)*er + kl*(nu*du[ 0] - nu_l*dgl)*el)
         #print("Diffusive SAT face = ", sat_visc_r*er + sat_visc_l*el ) #*kl*(nu_l*dgl - nu*du[ 0] )
+        print("Entropy Rate of Inviscid SAT = ", (elem.u) @(elem.P_phys @ sat_inv))
         return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
 
       

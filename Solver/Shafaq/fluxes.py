@@ -19,17 +19,18 @@ class Flux(ABC):
     @abstractmethod
     def flux(self, u): ...
     @abstractmethod
+    def flux_grad(self, u): ...
+    @abstractmethod
     def flux_ec(self, u1: NDArray, u2: NDArray): ...
     @abstractmethod
     def flux_ec_vol(self, Q: NDArray, u :NDArray): ...
     @abstractmethod
-    def ip_term(self, Q: NDArray, u :NDArray): ...
+    def ip_term(self, nu_i:float, nu_gi:float , det_J:float, B:float = 1): ...
     @abstractmethod
     def f_ssr_meriam(self, u_int:float | NDArray[np.float64],
              g_int:float | NDArray[np.float64], 
              w_uint:float | NDArray[np.float64], 
-             w_gint:float | NDArray[np.float64],
-             f_ec:callable[...,float]): ...
+             w_gint:float | NDArray[np.float64]): ...
     
 # ---------- Burgers --------------------------------------------
 class BurgerFlux(Flux):
@@ -49,6 +50,9 @@ class BurgerFlux(Flux):
             `0.5 * u**2`, same shape as *u*.
         """
         return 0.5 * u ** 2
+    
+    def flux_grad(self, u):
+        return u
     
     def flux_ec(self, u1: NDArray[np.float64],
                 u2: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -124,13 +128,12 @@ class BurgerFlux(Flux):
     def f_ssr_meriam(self, u_int:float | NDArray[np.float64],
              g_int:float | NDArray[np.float64], 
              w_uint:float | NDArray[np.float64], 
-             w_gint:float | NDArray[np.float64],
-             f_ec:callable[...,float]):
+             w_gint:float | NDArray[np.float64]):
         """
         Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
         Using the merriam convention. 
         """
-        f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(u_int)*(w_uint - w_gint) 
+        f_ssr = self.flux_ec(u_int,g_int) + 0.5*np.abs(self.flux_grad(u_int))*(w_uint - w_gint) 
         return f_ssr
 
 # ---------- Linear advection -----------------------------------
@@ -158,6 +161,9 @@ class AdvectiveFlux(Flux):
         return self.a * u
     
     
+    
+    def flux_grad(self, u):
+        return self.a
     
     
     def flux_ec(self,
@@ -214,13 +220,12 @@ class AdvectiveFlux(Flux):
     def f_ssr_meriam(self, u_int:float | NDArray[np.float64],
                  g_int:float | NDArray[np.float64], 
                  w_uint:float | NDArray[np.float64], 
-                 w_gint:float | NDArray[np.float64],
-                 f_ec:callable[...,float]):
+                 w_gint:float | NDArray[np.float64]):
         """
         Entropy Stable interface flux. From the Carpenter and Fisher paper 2014 eq (4.13). 
         Using the merriam convention. 
         """
-        f_ssr = f_ec(u_int,g_int) + 0.5*np.abs(self.a)*(w_uint - w_gint) 
+        f_ssr = self.flux_ec(u_int,g_int) + 0.5*np.abs(self.flux_grad(u_int))*(w_uint - w_gint) 
         return f_ssr
 
 
