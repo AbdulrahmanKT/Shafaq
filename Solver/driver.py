@@ -8,13 +8,13 @@ import Shafaq.Shock # For using the shock capturing
 
 
 # --- 1) Problem parameters ---
-Lx      = 1           # domain length
-nex     = 100           # number of elements
-poly_p  = 4              # polynomial degree (n)
+Lx      = 5           # domain length
+nex     = 5           # number of elements
+poly_p  = 6              # polynomial degree (n)
 
-t_final = 1000          # final time
-dt      = 1e-5
-plot_every = 1
+t_final = 2          # final time
+dt      = 1e-4
+plot_every = 10
 # --- 2) Build SBP operators on reference ---
 n     = poly_p
 xi, w = lgl(n)
@@ -29,10 +29,10 @@ Q_ref = sbp_q(n)
 
 # Option B: Linear advection + constant viscosity (u_t + a u_x = ν u_xx)
 a    = 1
-nu   = 0.000001     # viscosity
+nu   = 0.0     # viscosity
 v_off = 1      # turn viscous SAT on/off (1→on, 0→off)
 c_off = 0      # turn convection SAT on/off (1→on, 0→off)
-eq   = Equation1D(flux=AdvectiveFlux(a=2), nu=nu, c_off=0)
+eq   = Equation1D(flux=AdvectiveFlux(a=1), nu=nu, c_off=1)
 #eq   = Equation1D(flux=AdvectiveFlux(a=0.5), nu=0, c_off=1)
 #eq   = Burger(c_off=c_off, nu=nu, v_off=v_off)
 
@@ -80,32 +80,32 @@ def gaussian(x, mu=0.5, sigma=0.1):
 def sin_short(x):
     return np.sin(x*np.pi)
 
-mesh.set_initial_condition(sin_short)
+mesh.set_initial_condition(gaussian)
 mesh.rhs()
-fig, ax = plt.subplots(figsize=(20,5))
-mesh.plot()
-for i, elem in enumerate(mesh.elements):
-    ax.plot(elem.x, elem.u, label="Solution")
-    #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
-    #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
-    #ax.plot(elem.x, elem.rhs, "o", label="Total RHS")
-    ax.grid(True)
-ax.set_title(" Initial Condition")
-ax.set_ylim(-0.01, 0.5)
-ax.grid(True)
-plt.tight_layout()
+#fig, ax = plt.subplots(figsize=(20,5))
+#mesh.plot()
+#for i, elem in enumerate(mesh.elements):
+#    ax.plot(elem.x, elem.u, label="Solution")
+#    #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
+#    #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
+#    #ax.plot(elem.x, elem.rhs, "o", label="Total RHS")
+#    ax.grid(True)
+#ax.set_title(" Initial Condition")
+#ax.set_ylim(-0.01, 0.5)
+#ax.grid(True)
+#plt.tight_layout()
 
 
 # --- 4) Determine stable dt via max wave-speed ---
-dx_elem = Lx / nex
+
 #u_max   = np.max([np.max(np.abs(elem.u)) for elem in mesh.elements])
 
 # --- 5) Time‐stepping loop using RK4 ---
 t = 0.0
 it = 0
-#snapshots = [mesh]  # store initial snapshot if needed
-#fig, ax = plt.subplots(figsize=(20,5))
-#mesh.plot(ax=ax)
+
+fig, ax = plt.subplots(figsize=(20,5))
+mesh.plot(ax=ax)
 times = []
 energies = []
 
@@ -116,24 +116,24 @@ while t < t_final:
     mesh.step_rk4(dt)
     t += dt
     it += 1
-    #ax.clear()
-    #ax.grid(True)
-    #ax.set_xlabel("x")
-    #ax.set_ylabel("u")
-    #ax.set_ylim(0, 1)
+    ax.clear()
+    ax.grid(True)
+    ax.set_xlabel("x")
+    ax.set_ylabel("u")
+    ax.set_ylim(-0.1, 1.2)
     
-    #if it % plot_every == 0:
-        #for i, elem in enumerate(mesh.elements):
-            #ax.plot(elem.x, elem.u, label="Solution")
+    if it % plot_every == 0:
+        for i, elem in enumerate(mesh.elements):
+            ax.plot(elem.x, elem.u, label="Solution")
             #ax.plot(elem.x, 100*elem.av_eps*np.ones_like(elem.x),"--", label="AV")
             #ax.plot(elem.x, -elem.S*np.ones_like(elem.x), label="Sensor")
             #ax.plot(elem.x, elem.irhs, "+-", label="Interior RHS")
             #ax.plot(elem.x, elem.sat_rhs, "*", label="SAT RHS")
             #ax.plot(elem.x, elem.rhs, ".", label="Total RHS")
-            #ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
+            ax.set_title(f"Solution to the Viscous Burgers Equation using {nex*n} DOF at Time {t:.3f}")
 
-        #plt.pause(1/10000)
-        #plt.tight_layout()
+        plt.pause(1/10000)
+        plt.tight_layout()
 
         #plt.savefig("Final_Step.png")
     #ax.plot( mesh.total_energy(), label="Total Energy")
@@ -143,10 +143,10 @@ while t < t_final:
     E = mesh.total_energy_normalized()
 
     energies.append(E)
-    print("===================================================")
-    print(f"t = {t:.4f},  E = {E}")
-    print(f"Max AV = {np.max(mesh.print_av())}")
-    print("===================================================")
+    #print("===================================================")
+    #print(f"t = {t:.4f},  E = {E}")
+    #print(f"Max AV = {np.max(mesh.print_av())}")
+    #print("===================================================")
    
 #ax.legend()
 plt.tight_layout()

@@ -27,12 +27,6 @@ class Equation1D(ABC):
         self.c_off  = c_off     # Coefficient for turning off convection - Debugging
 
 
-
-
-    
-
-
-    
     def viscous_aux(self, elem: Element1D, gl:float, gr:float): 
         """
         LDG gradient reconstruction with penalty terms.
@@ -63,7 +57,7 @@ class Equation1D(ABC):
 
         # Forming the gradient theta 
         dw = elem.D_phys@u
-        theta = dw + elem.P_inv@( +(-kr)*(u[-1] - gr)*er + (-kl)*(u[0] - gl)*el) # The jump sign convention is " -(normal)(Inner - Outer) " 
+        theta = dw + elem.P_inv@( +(-kr/2)*(u[-1] - gr)*er + (-kl/2)*(u[0] - gl)*el) # The jump sign convention is " -(normal)(Inner - Outer) " 
         return theta
     
 
@@ -100,6 +94,7 @@ class Equation1D(ABC):
         # Definition of Variables
         ul = elem.left_boundary()
         ur = elem.right_boundary()
+        u =  elem.u
         nu       =    float(self.nu + elem.av_eps)
         nu_l     =    float(self.nu + av_l) 
         nu_r     =    float(self.nu + av_r)       
@@ -109,22 +104,24 @@ class Equation1D(ABC):
         er       = elem.er
         du       = elem.du # The gradients are stored element wise - this method assumes that they have been calculated by viscous_aux
         J        = elem.J  # Determinante of the jacobian of the element
-        
-        # Forming the inviscid SAT
-        sat_inv_r  =    kr*(self.flux.flux(ur)-self.flux.f_ssr_meriam(ur,gr,ur,gr))*er # Right Interface Flux -> SAT_inv_r
-        sat_inv_l  =    kl*(self.flux.flux(ul)-self.flux.f_ssr_meriam(ul,gl,ul,gl))*el             # Left Interface Flux -> SAT_inv_l
+        u_max    = np.max(u)
+        # Forming the inviscid SATu_max    
+        sat_inv_r  =    kr*(self.flux.flux(ur)-self.flux.f_ssr_meriam(ur,gr,gr,ur, u_max))*er # Right Interface Flux -> SAT_inv_r
+        sat_inv_l  =    kl*(self.flux.flux(ul)-self.flux.f_ssr_meriam(ul,gl,gl,ul, u_max))*el             # Left Interface Flux -> SAT_inv_l
         sat_inv = sat_inv_r + sat_inv_l
         
 
         # Forming the viscous SAT
-        sat_visc_r = (-kr*(nu*du[-1] - nu_r*dgr) - self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er # The gradient jump should be opposite of normal, and the IP term should penalize opposite of that
-        sat_visc_l = (-kl*(nu*du[ 0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el # The gradient jump should be opposite of normal, and the IP term should penalize opposite of that
+        sat_visc_r = (-kr/2*(nu*du[-1] - nu_r*dgr) + self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er # The gradient jump should be opposite of normal, and the IP term should penalize opposite of that
+        sat_visc_l = (-kl/2*(nu*du[ 0] - nu_l*dgl) + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el # The gradient jump should be opposite of normal, and the IP term should penalize opposite of that
         sat_visc = sat_visc_r + sat_visc_l
     
         #print("IP = ", self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr)*er + self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl)*el)
         #print("Diffusive SAT = ", kr*(nu*du[-1] - nu_r*dgr)*er + kl*(nu*du[ 0] - nu_l*dgl)*el)
         #print("Diffusive SAT face = ", sat_visc_r*er + sat_visc_l*el ) #*kl*(nu_l*dgl - nu*du[ 0] )
-        print("Entropy Rate of Inviscid SAT = ", (elem.u) @(elem.P_phys @ sat_inv))
+        #print("IP*Jump = ", - (self.flux.ip_term(nu_i=nu, nu_gi=nu_r, det_J=J)*(ur - gr))*er + (self.flux.ip_term(nu_i=nu, nu_gi=nu_l, det_J=J)*(ul - gl))*el)
+        #print("Entropy Rate of Inviscid SAT = ", (u.T) @(elem.P_phys @ sat_inv))
+        print(sat_visc + sat_inv)
         return elem.P_inv@ (sat_visc + sat_inv*self.c_off) 
 
       

@@ -55,7 +55,7 @@ class Element1D:
         # physical‐space SBP operators:
         self.D_phys  = D_ref / ( self.J)         # ∂/∂x = (1/J) ∂/∂ξ
         self.P_phys  = P_ref * ( self.J)         # ∫_x = ∫_ξ J dξ
-        self.Q_phys  = self.P_phys.dot(self.D_phys) # Notice the use of the physical operators 
+        self.Q_phys  = Q_ref # Notice the use of the physical operators 
         self.P_inv   = np.linalg.inv(self.P_phys)
         self.el      = np.eye(self.n + 1)[0] # Using the E operator that is consistant with SBP theory 
         self.er      = np.eye(self.n + 1)[-1] # Using the E operator that is consistant with SBP theory
@@ -387,11 +387,11 @@ class Mesh1D:
             
             # neighbor ∂u/∂x at the faces from neighboring elements
             dgl = self.elements[left_id].du[-1] # Gradients at the neighboring elements at the left element at the left boundary
-            dgr = self.elements[right_id].du[0]  # Gradients at the neighboring elements at the left element at the right boundary
+            dgr = self.elements[right_id].du[0]  # Gradients at the neighboring elements at the right element at the right boundary
             
             # Neighboring AV 
             avl = self.elements[left_id].av_eps # Gradients at the neighboring elements at the left element at the left boundary
-            avr = self.elements[right_id].av_eps  # Gradients at the neighboring elements at the left element at the right boundary
+            avr = self.elements[right_id].av_eps  # Gradients at the neighboring elements at the right element at the right boundary
             
             # Forming the full rhs
             sat_visc = elem.SAT_rhs( gl, gr, dgl, dgr, avl, avr)
